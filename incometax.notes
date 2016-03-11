@@ -1,0 +1,54 @@
+
+
+==== scale ====================================================================================================
+
+TODO: establish scale - map income value to pixels
+      e.g. the canvas is 600 pixels high
+      the user enters 50K for income
+      simple: 50K / 600 = $/pixel
+
+
+
+
+==== init ====================================================================================================
+
+
+Use HTML5 Canvas
+
+Easy to draw vertical rectangle to represent income
+
+use setInterval()/setTimeout() for animations
+
+Easy to draw lines, arrows, and text
+
+Could easily draw brace edges
+
+
+What does the data look like?
+    - income
+    - deductions
+    - rebates
+    - tax brackets
+        - tax rate
+        - income range
+    - taxed amount per bracket
+
+ss taxes
+medicare taxes
+
+
+
+
+
+==== setup ====================================================================================================
+
+
+$ npm init      // creates package.json (run from windows CMD)
+$ npm install express --save
+
+$ bower init
+$ bower install angular --save
+$ bower install bootstrap --save
+$ bower install underscore --save
+
+
