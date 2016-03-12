@@ -49,17 +49,17 @@
                             So if the total value of your itemized deductions does not exceed the standard deduction, don't bother itemizing.
                         </p>
                         <p class="itc-explain" ng-if="showDeductions">
-                            Read more at <a href="https://www.irs.gov/Credits-&-Deductions/Individuals/Standard-Deduction">irs.gov</a>.
+                            Learn more at <a href="https://www.irs.gov/Credits-&-Deductions/Individuals/Standard-Deduction">irs.gov</a>.
                         </p>
                         <hr class="itc-explain" />
                     </div>
 
-                    <div>
+                    <p>
                         <span class="itc-label">Standard Deduction: <span class="itc-label-right">{{ TaxRates.deductions.single | currency : "$" : 0 }}</span></span>
-                    </div>
-                    <div class="text-center">
+                    </p>
+                    <p class="text-center">
                         <span class="itc-label-soft">&#8212; or &#8212;</span>
-                    </div>
+                    </p>
 
                     <div class="form-group" ng-init="showItemizedDeductions=false">
                         <span class="itc-label">Itemized Deductions 
@@ -67,7 +67,7 @@
                         </span>
                         <div class="itc-explain" ng-if="showItemizedDeductions">
                             <p>
-                            Common itemized deductions include:
+                                Common itemized deductions include:
                             </p>
                             <ul>
                                 <li>Charitable Contributions</li>
@@ -76,7 +76,7 @@
                                 <li>Large Medical/Dental Expenses</li>
                             </ul>
                             <p>
-                                Read more at <a href="https://www.irs.gov/Credits-&-Deductions/Individuals#deductions">irs.gov</a>.
+                                Learn more at <a href="https://www.irs.gov/Credits-&-Deductions/Individuals#deductions">irs.gov</a>.
                             </p>
                             <hr />
                         </div>
@@ -84,6 +84,37 @@
                     </div>
 
                 </div>
+
+                <div class="itc-container" ng-init="showCredits=false">
+                    <h5>Tax Credits<small class="itc-show-more"><a href="" ng-click="showCredits= !showCredits">[explain]</a></small></h5>
+                    <div ng-if="showCredits" class="itc-explain">
+                        <p>
+                            <em>Tax Credits</em> are subtracted from the amount of tax you owe. 
+                        </p>
+                        <p>
+                            Credits are either <em>refundable</em> (meaning you get the full credit even if it
+                            amounts to more than the tax you owe) or <em>non-refundable</em> (meaning you only get credit
+                            up to the amount of tax you owe).
+                        </p>
+                        <p>
+                            Common tax credits include:
+                        </p>
+                        <ul>
+                            <li>Earned Income Tax Credit</li>
+                            <li>Premium Tax Credit (Obamacare)</li>
+                            <li>Child Tax Credit</li>
+                        </ul>
+                        <p>
+                            Learn more at <a href="https://www.irs.gov/Credits-&-Deductions/Individuals">irs.gov</a>.
+                        </p>
+                        <hr class="itc-explain" />
+                    </div>
+                    <div>
+                        <span class="itc-label">Credits</span>
+                        <input id="itc-input-credit" type="text" class="form-control input-sm" ng-model="inputCredit" placeholder="Tax Credit" />
+                    </div>
+                </div>
+
 
                 <!-- we need this so that pressing enter in a text field will submit the form -->
                 <button type="submit" ng-show="false" >Refresh</button>
