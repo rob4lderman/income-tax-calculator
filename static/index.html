@@ -13,40 +13,94 @@
 
 </head>
 <body>
+    <div class="container-fluid" id="itc-page-header">
+        <div class="container">
+            <div class="col-md-6">
+                Income Tax Calculator
+            </div>
+        </div>
+    </div>
     <div class="container" ng-controller="MainController">
         <div class="col-md-3">
-            <h3>hi!</h3>
-            <p>
-                Enter your tax information here.
-            </p>
             <form ng-submit="onFormSubmit()">
-                <div class="form-group">
-                    <label for="itc-input-income">Income</label>
-                    <input id="itc-input-income" type="text" class="form-control input-sm" ng-model="inputIncome" placeholder="Income" />
+
+                <div class="itc-container" ng-init="showDeductions=false">
+                    <h5>Income and Withholdings</h5>
+                    <div class="form-group">
+                        <span class="itc-label">Income</span>
+                        <input id="itc-input-income" type="text" class="form-control input-sm" ng-model="inputIncome" placeholder="Income" />
+                    </div>
+
+                    <div class="form-group">
+                        <span class="itc-label">Tax Withheld</span>
+                        <input id="itc-input-tax-withheld" type="text" class="form-control input-sm" ng-model="inputTaxWithheld" placeholder="Tax withheld" />
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="itc-input-tax-withheld">Tax withheld</label>
-                    <input id="itc-input-tax-withheld" type="text" class="form-control input-sm" ng-model="inputTaxWithheld" placeholder="Tax withheld" />
-                </div>
-                <div class="form-group">
-                    <label for="itc-input-deduction">Deduction</label>
-                    <input id="itc-input-deduction" type="text" class="form-control input-sm" ng-model="inputDeduction" placeholder="Deduction" />
+
+                <div class="itc-container" ng-init="showDeductions=false">
+                    <h5>Deductions <small class="itc-show-more"><a href="" ng-click="showDeductions = !showDeductions">[explain]</a></small></h5>
+                    <div ng-if="showDeductions">
+                        <p class="itc-explain" >
+                            <em>Deductions</em> are subtracted from your income and therefore reduce the amount
+                            of income that is taxed.  
+                        </p>
+                        <p class="itc-explain" ng-if="showDeductions">
+                            You can choose either the <em>standard deduction</em> or <em>itemized deductions</em>.  You can't do both.
+                            So if the total value of your itemized deductions does not exceed the standard deduction, don't bother itemizing.
+                        </p>
+                        <p class="itc-explain" ng-if="showDeductions">
+                            Read more at <a href="https://www.irs.gov/Credits-&-Deductions/Individuals/Standard-Deduction">irs.gov</a>.
+                        </p>
+                        <hr class="itc-explain" />
+                    </div>
+
+                    <div>
+                        <span class="itc-label">Standard Deduction: <span class="itc-label-right">{{ TaxRates.deductions.single | currency : "$" : 0 }}</span></span>
+                    </div>
+                    <div class="text-center">
+                        <span class="itc-label-soft">&#8212; or &#8212;</span>
+                    </div>
+
+                    <div class="form-group" ng-init="showItemizedDeductions=false">
+                        <span class="itc-label">Itemized Deductions 
+                            <small class="itc-show-more"><a href="" ng-click="showItemizedDeductions = !showItemizedDeductions">[explain]</a></small>
+                        </span>
+                        <div class="itc-explain" ng-if="showItemizedDeductions">
+                            <p>
+                            Common itemized deductions include:
+                            </p>
+                            <ul>
+                                <li>Charitable Contributions</li>
+                                <li>Mortgage Interest</li>
+                                <li>Student Loan Interest</li>
+                                <li>Large Medical/Dental Expenses</li>
+                            </ul>
+                            <p>
+                                Read more at <a href="https://www.irs.gov/Credits-&-Deductions/Individuals#deductions">irs.gov</a>.
+                            </p>
+                            <hr />
+                        </div>
+                        <input id="itc-input-deduction" type="text" class="form-control input-sm" ng-model="inputDeduction" placeholder="Deduction" />
+                    </div>
+
                 </div>
 
                 <!-- we need this so that pressing enter in a text field will submit the form -->
                 <button type="submit" ng-show="false" >Refresh</button>
             </form>
 
-            <div>
+            <div class="itc-container">
+                <h5>Links</h5>
                 <a href="http://taxfoundation.org/article/2015-tax-brackets">2015 Income Tax Brackets</a>
                 <br />
                 <a href="https://www.ssa.gov/oact/cola/cbb.html">2015 FICA Tax Rates</a>
+                <br />
+                <a href="https://www.irs.gov/Credits-&-Deductions">Tax Credits &amp; Deductions</a>
             </div>
 
         </div>
 
         <div class="col-md-9">
-            <h3> holla! </h3>
             <canvas id="itc-canvas" width="800" height="600"></canvas>
         </div>
 

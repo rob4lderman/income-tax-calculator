@@ -1,5 +1,80 @@
 
 
+#itc-page-header {
+    height: 50px;
+    background-color: #cff;
+    line-height: 30px;
+    padding: 10px 0px;
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+
+a:focus {
+    text-decoration: none;
+}
+
+a:hover, #tm-page-header a:hover {
+    text-decoration: none;
+    color: #aaa;
+}
+
+em {
+    font-weight: bold;
+}
+
 #itc-canvas {
     border: solid 0px #ccc;
 }
+
+.itc-container {
+    border: solid 1px #ddd;
+    padding: 6px;
+    border-radius: 5px;
+    margin-top: 15px;
+}
+
+.itc-container h5 {
+    margin-top: 0px;
+    background-color: #cff;
+    padding: 4px;
+}
+
+.itc-show-more {
+    float: right;
+    font-weight: normal;
+    padding-right: 5px;
+    padding-top: 3px;
+}
+
+.itc-explain {
+    font-size: smaller;
+    color: #888;
+    margin-top: 10px;
+}
+
+.itc-explain hr {
+    margin-top: 5px;
+}
+
+.itc-explain ul {
+    padding-left: 25px;
+}
+
+.itc-label {
+    width: 100%;
+    font-weight: bold;
+    font-size: small;
+}
+
+.itc-label-right {
+    float: right;
+    padding-right: 5px;
+}
+
+.itc-label-soft {
+    font-style: italic;
+    color: #888;
+    font-size: small;
+}
+
+
