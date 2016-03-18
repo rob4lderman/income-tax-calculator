@@ -23,7 +23,12 @@ em {
 }
 
 #itc-canvas {
+    position: fixed;
     border: solid 0px #ccc;
+}
+
+#itc-canvas-parent {
+    position: relative;
 }
 
 .itc-container {

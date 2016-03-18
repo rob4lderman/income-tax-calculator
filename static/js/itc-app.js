@@ -23,9 +23,6 @@ angular.module( "ItcApp", [] )
          if (prevIncome != $scope.inputIncome) {
              // redraw everything (need to re-scale since the total income changed)
              prevTaxableIncome = 0;
-         // -rx-     redrawCanvas();
-         // -rx- } else {
-         // -rx-     refreshCanvas();
          }
          refreshCanvas();
     }
@@ -37,7 +34,6 @@ angular.module( "ItcApp", [] )
     var onLoad = function() {
         logger.fine("onLoad: entry");
 
-        // -rx- redrawCanvas();
         refreshCanvas();
     }
 
@@ -54,19 +50,6 @@ angular.module( "ItcApp", [] )
          prevIncome = $scope.inputIncome;
          prevTaxableIncome = $scope.inputIncome - $scope.inputDeduction;
     };
-
-    // -rx- /**
-    // -rx-  *
-    // -rx-  */
-    // -rx- var redrawCanvas = function() {
-    // -rx-     TheCanvas.redraw( parseInt( $scope.inputIncome),
-    // -rx-                       parseInt( $scope.inputTaxWithheld ),
-    // -rx-                       parseInt( $scope.inputDeduction ) );
-
-    // -rx-     prevIncome = $scope.inputIncome;
-    // -rx-     prevTaxableIncome = $scope.inputIncome - $scope.inputDeduction;
-    // -rx-     // Projector.drawIncomeBar( 100000 );
-    // -rx- };
 
     /**
      * Export to scope
@@ -131,11 +114,13 @@ angular.module( "ItcApp", [] )
     logger.info("alive!");
 
     /**
-     * TODO
      * The x-coord for the vertical income axis line
      */
     var incomeAxisX = 150;
 
+    /**
+     * Bar colors for the "tax withheld" bar
+     */
     var fillStyleRefund = "#4c4";
     var fillStyleBill = "#c44";
 
@@ -145,32 +130,37 @@ angular.module( "ItcApp", [] )
     var barWidth = 100;
 
     /**
-     * Create a new canvas element and replace the old one in the DOM.
+     * Create a new canvas element 
      *
-     * TODO: the purpose of a brand new canvas element is to ensure that 
-     *       leftover animations from a previous refresh() do not
-     *       interfere with the current refresh() (since they're 
-     *       operating an a now-defunct canvas element that's been replaced).
+     * The purpose of creating a brand new canvas element for each refresh()
+     * is to ensure that leftover animations from a previous refresh() do not
+     * interfere with the current refresh() (since the previous animations are
+     * drawing on a canvas element that's been replaced and is no longer visible).
      *
      * @return the new canvas element
      */
     var createCanvasElement = function() {
-
-        var oldCanvasElement = document.getElementById("itc-canvas");
 
         var newCanvasElement = document.createElement("canvas");
         newCanvasElement.id = "itc-canvas";
         newCanvasElement.setAttribute("width","800");
         newCanvasElement.setAttribute("height","600");
 
-        document.getElementById("itc-canvas-parent").replaceChild( newCanvasElement, oldCanvasElement );
-
         return newCanvasElement;
     };
 
-    // -rx- var theCanvasElement = document.getElementById("itc-canvas");
-    var theCanvasElement = createCanvasElement();
-    var canvas = theCanvasElement.getContext("2d");
+    /**
+     * Replace the existing <canvas> element in the DOM with the given newCanvasElement
+     */
+    var replaceCanvasElement = function( newCanvasElement ) {
+        var oldCanvasElement = document.getElementById("itc-canvas");
+        document.getElementById("itc-canvas-parent").replaceChild( newCanvasElement, oldCanvasElement );
+    };
+
+    /**
+     * TODO: ultimately want to get rid of all "global" state.
+     */
+    var theCanvasElement = document.getElementById("itc-canvas");
 
     /**
      * @return the width of the <canvas> element
@@ -195,6 +185,7 @@ angular.module( "ItcApp", [] )
 
     /**
      * A "view" or coord frame for translating to. 
+     * TODO: ultimately want to get rid of all "global" state.
      */
     var frame0 = { x: 0, y: getHeight() };
     var frame1 = { x: 0, y: getHeight() - 20};
@@ -271,10 +262,10 @@ angular.module( "ItcApp", [] )
 
     /**
      * fully clear the canvas context
+     * Note: this function isn't used, since we replace the entire <canvas>
+     *       element on refresh().
      */
     var clear = function() {
-        theCanvasElement = createCanvasElement();
-        canvas = theCanvasElement.getContext("2d");
         canvas.translate(0,0);
         canvas.clearRect( 0, 0, getWidth(), getHeight() );
     };
@@ -295,12 +286,12 @@ angular.module( "ItcApp", [] )
      * @param state 
      */
     var barRenderFn = function(state) {
-        translate(state.frame);
-        canvas.fillStyle = state.fillStyle;
-        canvas.fillRect( state.x,
-                         -1 * state.y,
-                         state.w,
-                         -1 * state.h );
+        translate(state.canvas, state.frame);
+        state.canvas.fillStyle = state.fillStyle;
+        state.canvas.fillRect( state.x,
+                               -1 * state.y,
+                               state.w,
+                               -1 * state.h );
     };
 
     /**
@@ -340,11 +331,11 @@ angular.module( "ItcApp", [] )
      * Render function used to draw bracket lines and other lines
      */
     var lineRenderFn = function(state) {
-        translate(state.frame);
-        canvas.beginPath();
-        canvas.strokeStyle = state.fillStyle;
-        canvas.lineWidth = 0.5;
-        drawLine( canvas,
+        translate(state.canvas, state.frame);
+        state.canvas.beginPath();
+        state.canvas.strokeStyle = state.fillStyle;
+        state.canvas.lineWidth = 0.5;
+        drawLine( state.canvas,
                   { x: state.x,            y: -state.y },
                   { x: state.x + state.l,  y: -state.y } );
     };
@@ -411,9 +402,9 @@ angular.module( "ItcApp", [] )
             logger.fine("animate: starting animation for state: " + JSON.stringify(state) );
             var id = setInterval( function() {
                             
-                                      canvas.save();
+                                      state.canvas.save();
                                       renderFn( state );
-                                      canvas.restore();
+                                      state.canvas.restore();
 
                                       if ( ! iterateFn( state ) ) {
                                           clearInterval(id);
@@ -428,17 +419,17 @@ angular.module( "ItcApp", [] )
     /**
      * canvas.translate(frame.x, frame.y)
      */
-    var translate = function(frame) {
+    var translate = function(canvas, frame) {
         canvas.translate(frame.x, frame.y);  // translate 0,0 to lower-left corner (instead of upper-left)
     };
 
     /**
      * Draw the vertical income axis.
      */
-    var drawIncomeAxis = function( canvas ) {
+    var drawIncomeAxis = function( canvas, frame ) {
         canvas.save();
 
-        translate( frame1 ); 
+        translate( canvas, frame ); 
         canvas.beginPath();
         canvas.strokeStyle = "#888888";
         canvas.lineWidth = 1;
@@ -452,10 +443,10 @@ angular.module( "ItcApp", [] )
     /**
      * Draw a solid x axis.
      */
-    var drawXAxis = function( canvas ) {
+    var drawXAxis = function( canvas, frame ) {
         canvas.save();
 
-        translate( frame1 ); 
+        translate( canvas, frame ); 
         canvas.beginPath();
         canvas.strokeStyle = "#888888";
         canvas.lineWidth = 1;
@@ -470,10 +461,10 @@ angular.module( "ItcApp", [] )
     /**
      * Draw x-axis labels
      */
-    var drawXAxisLabels = function( canvas ) {
+    var drawXAxisLabels = function( canvas, frame ) {
         canvas.save();
 
-        translate(frame0);
+        translate( canvas, frame);
         canvas.font="14px Georgia";
         // canvas.strokeStyle = "#888";
         // canvas.strokeText( state.label, state.x, -1 * (state.y + 5) ); 
@@ -491,7 +482,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an array of animate() calls, for each of the tax brackets.
      */
-    var buildBracketLineAnimations = function(income, ppdFn, prevIncome) {
+    var buildBracketLineAnimations = function(canvas, income, ppdFn, prevIncome) {
 
         var lineLength = 315;  // + 1 for the spacing between income bar and tax bar
 
@@ -502,6 +493,7 @@ angular.module( "ItcApp", [] )
                                          y: ppdFn( TaxRates.getBracketTop(bracket,income) ),
                                          l: shouldAnimate(bracket, income, prevIncome) ? 0 : lineLength,
                                          endLength: lineLength,
+                                         canvas: canvas,
                                          frame: frame1,
                                          fillStyle: "#888888"
                                        };
@@ -515,7 +507,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an array of animate() calls, for each of the tax brackets.
      */
-    var buildBracketLabelAnimations = function(income, ppdFn) {
+    var buildBracketLabelAnimations = function(canvas, income, ppdFn) {
 
         // Configure initial state(s).
         var states = _.map( TaxRates.getBrackets(income),
@@ -523,20 +515,23 @@ angular.module( "ItcApp", [] )
                                 return { label: $filter("currency")( TaxRates.getBracketTop(bracket,income), "$", 0 ), 
                                          rateLabel: bracket.rateLabel,
                                          x: getIncomeAxisLabelX(),
-                                         y: ppdFn( TaxRates.getBracketTop(bracket,income) ) } ;
+                                         y: ppdFn( TaxRates.getBracketTop(bracket,income) ) ,
+                                         canvas: canvas,
+                                         frame: frame1
+                                       } ;
                             } );
 
         var renderFn = function(state) {
-            translate(frame1);
-            canvas.font="14px Georgia";
+            translate(state.canvas, state.frame);
+            state.canvas.font="14px Georgia";
             // canvas.strokeStyle = "#888";
             // canvas.strokeText( state.label, state.x, -1 * (state.y + 5) ); 
-            canvas.fillStyle = "#888";
-            canvas.textAlign = "start";
-            canvas.fillText( state.label, state.x, -1 * (state.y + 5) );  
+            state.canvas.fillStyle = "#888";
+            state.canvas.textAlign = "start";
+            state.canvas.fillText( state.label, state.x, -1 * (state.y + 5) );  
 
-            canvas.textAlign = "end";
-            canvas.fillText( state.rateLabel, state.x + 95, -1 * (state.y - 15) );  
+            state.canvas.textAlign = "end";
+            state.canvas.fillText( state.rateLabel, state.x + 95, -1 * (state.y - 15) );  
         };
 
         var iterateFn = function() { 
@@ -586,7 +581,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an array of animate() calls, for each of the tax brackets.
      */
-    var buildBracketTaxRateLabelAnimations = function(income, ppdFn) {
+    var buildBracketTaxRateLabelAnimations = function(canvas, income, ppdFn) {
 
         var brackets = TaxRates.getBrackets(income);
 
@@ -598,14 +593,17 @@ angular.module( "ItcApp", [] )
                                          x: getTaxBarX() + 5,
                                          // y: ppdFn( Math.min(bracket.top,income) - (TaxRates.getBracketSize(bracket, income)/2) ) } ;
                                          // y: ppdFn( Math.min(bracket.top,income) ) - 15 } ;
-                                         y: ppdFn( bracket.bottom + TaxRates.getTaxedAmount(bracket,income) ) + 5 } ;
+                                         y: ppdFn( bracket.bottom + TaxRates.getTaxedAmount(bracket,income) ) + 5 ,
+                                         canvas: canvas,
+                                         frame: frame1
+                                       } ;
                             } );
 
         var renderFn = function(state) {
-            translate(frame1);
-            canvas.font="14px Georgia";
-            canvas.fillStyle = "#888";
-            canvas.fillText( state.label, state.x, -1 * (state.y) );  
+            translate(state.canvas, state.frame);
+            state.canvas.font="14px Georgia";
+            state.canvas.fillStyle = "#888";
+            state.canvas.fillText( state.label, state.x, -1 * (state.y) );  
         };
 
         var iterateFn = function() { 
@@ -618,7 +616,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an animate call for the effective tax
      */
-    var buildTotalTaxRateLabelAnimation = function(income, taxableIncome, ppdFn) {
+    var buildTotalTaxRateLabelAnimation = function(canvas, income, taxableIncome, ppdFn) {
 
         var brackets = TaxRates.getBrackets(taxableIncome);
 
@@ -642,16 +640,18 @@ angular.module( "ItcApp", [] )
                         x: getTotalTaxBarX() + 5,
                         // y: ppdFn( Math.min(bracket.top,income) - (TaxRates.getBracketSize(bracket, income)/2) ) } ;
                         // y: ppdFn( Math.min(bracket.top,income) ) - 15 } ;
-                        y: ppdFn( totalTaxedAmount ) + (brackets.length + 2) + 5  // account for extra pixels between brackets
+                        y: ppdFn( totalTaxedAmount ) + (brackets.length + 2) + 5,  // account for extra pixels between brackets
                         // topY: ppdFn( totalTaxedAmount ) + 20
+                        canvas: canvas,
+                        frame: frame1
                     } ;
 
         var renderFn = function(state) {
-            translate(frame1);
-            canvas.font="14px Georgia";
-            canvas.fillStyle = "#888";
-            canvas.fillText( state.label, state.x, -1 * (state.y) );  
-            // canvas.fillText( state.topLabel, state.x, -1 * (state.topY) );  
+            translate(state.canvas, state.frame);
+            state.canvas.font="14px Georgia";
+            state.canvas.fillStyle = "#888";
+            state.canvas.fillText( state.label, state.x, -1 * (state.y) );  
+            // state.canvas.fillText( state.topLabel, state.x, -1 * (state.topY) );  
         };
 
         var iterateFn = function() { 
@@ -664,7 +664,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an animate() function, for the deduction bar
      */
-    var buildDeductionBarAnimation = function(income, deduction, ppdFn) {
+    var buildDeductionBarAnimation = function(canvas, income, deduction, ppdFn) {
 
         var taxableIncome = income - deduction;
 
@@ -674,6 +674,7 @@ angular.module( "ItcApp", [] )
                        w: barWidth,
                        h: 0,
                        endHeight: ppdFn( deduction ),
+                       canvas: canvas,
                        frame: frame1
                      };
 
@@ -687,7 +688,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an animate() function, for the top income line (including deduction)
      */
-    var buildIncomeLineAnimation = function(income, ppdFn) {
+    var buildIncomeLineAnimation = function(canvas, income, ppdFn) {
 
         var lineLength = 215;  // + 1 for the spacing between income bar and tax bar
 
@@ -696,6 +697,7 @@ angular.module( "ItcApp", [] )
                        y: ppdFn( income ),
                        l: 0,
                        endLength: lineLength,
+                       canvas: canvas,
                        frame: frame1,
                        fillStyle: "#888"
                      };
@@ -708,26 +710,28 @@ angular.module( "ItcApp", [] )
     /**
      * @return an animate() function, for rendering the income label
      */
-    var buildIncomeLabelAnimation = function(income, ppdFn) {
+    var buildIncomeLabelAnimation = function(canvas, income, ppdFn) {
 
         // Configure initial state(s).
         var state = { label: $filter("currency")( income, "$", 0 ), 
                       rateLabel: "0%",
                       x: getIncomeAxisLabelX(),
-                      y: ppdFn( income ) 
+                      y: ppdFn( income ) ,
+                      canvas: canvas,
+                      frame: frame1
                     } ;
 
         var renderFn = function(state) {
-            translate(frame1);
-            canvas.font="14px Georgia";
+            translate(state.canvas, state.frame);
+            state.canvas.font="14px Georgia";
             // canvas.strokeStyle = "#888";
             // canvas.strokeText( state.label, state.x, -1 * (state.y + 5) ); 
-            canvas.fillStyle = "#888";
-            canvas.textAlign = "start";
-            canvas.fillText( state.label, state.x, -1 * (state.y + 5) );  
+            state.canvas.fillStyle = "#888";
+            state.canvas.textAlign = "start";
+            state.canvas.fillText( state.label, state.x, -1 * (state.y + 5) );  
 
-            canvas.textAlign = "end";
-            canvas.fillText( state.rateLabel, state.x + 95, -1 * (state.y - 15) );  
+            state.canvas.textAlign = "end";
+            state.canvas.fillText( state.rateLabel, state.x + 95, -1 * (state.y - 15) );  
         };
 
         var iterateFn = function() { 
@@ -740,7 +744,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an array of animate() functions, for each of the tax brackets.
      */
-    var buildIncomeBarAnimations = function(income, ppdFn, prevIncome) {
+    var buildIncomeBarAnimations = function(canvas, income, ppdFn, prevIncome) {
 
         // Configure initial state(s).
         var states = _.map( TaxRates.getBrackets(income),
@@ -750,6 +754,7 @@ angular.module( "ItcApp", [] )
                                          y: ppdFn( bracket.bottom ) + 1,
                                          w: barWidth,
                                          h: shouldAnimate(bracket, income, prevIncome) ? 0 : endHeight,
+                                         canvas: canvas,
                                          endHeight: endHeight,
                                          frame: frame1
                                        };
@@ -768,7 +773,7 @@ angular.module( "ItcApp", [] )
      * @return an animate() call for the social security bracket.
      *
      */
-    var buildSocialSecurityTaxBarAnimation = function(income, ppdFn) {
+    var buildSocialSecurityTaxBarAnimation = function(canvas, income, ppdFn) {
 
         var bracket = TaxRates.socialsecurity.single;
 
@@ -778,6 +783,7 @@ angular.module( "ItcApp", [] )
                       h: 0,
                       endHeight: ppdFn( TaxRates.getTaxedAmount(bracket, income) ),
                       fillStyle:  TaxRates.socialsecurityFillStyle,
+                      canvas: canvas,
                       frame: frame1
                     };
 
@@ -794,7 +800,7 @@ angular.module( "ItcApp", [] )
      * @return an animate() call for social security tax bar (for "Total Tax" column)
      *
      */
-    var buildTotalTaxSocialSecurityTaxBarAnimation = function(income, ppdFn) {
+    var buildTotalTaxSocialSecurityTaxBarAnimation = function(canvas, income, ppdFn) {
 
         // Configure initial state(s).
         var totalTaxedAmount = _.reduce(TaxRates.getBrackets(income),
@@ -812,6 +818,7 @@ angular.module( "ItcApp", [] )
                        h: 0,
                        endHeight: ppdFn( TaxRates.getTaxedAmount(bracket, income) ),
                        fillStyle:  TaxRates.socialsecurityFillStyle,
+                       canvas: canvas,
                        frame: frame1
                      };
 
@@ -825,7 +832,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an animate() call, for social security
      */
-    var buildSocialSecurityTaxRateLabelAnimation = function(income, ppdFn) {
+    var buildSocialSecurityTaxRateLabelAnimation = function(canvas, income, ppdFn) {
 
         var bracket = TaxRates.socialsecurity.single;
 
@@ -836,16 +843,18 @@ angular.module( "ItcApp", [] )
                       x: getSocialSecurityTaxBarX(),
                       topY: ppdFn( TaxRates.getBracketTop( bracket,income) ) + 7,
                       topTopY: ppdFn( TaxRates.getBracketTop( bracket,income) ) + 20,
-                      y: ppdFn( TaxRates.getBracketTop( bracket,income) ) - ppdFn( TaxRates.getTaxedAmount(bracket, income) ) - 15
+                      y: ppdFn( TaxRates.getBracketTop( bracket,income) ) - ppdFn( TaxRates.getTaxedAmount(bracket, income) ) - 15,
+                      canvas: canvas,
+                      frame: frame1
                     };
 
         var renderFn = function(state) {
-            translate(frame1);
-            canvas.font="14px Georgia";
-            canvas.fillStyle = TaxRates.socialsecurityFillStyle ;
-            canvas.fillText( state.topTopLabel, state.x, -1 * (state.topTopY) );  
-            canvas.fillText( state.topLabel, state.x, -1 * (state.topY) );  
-            canvas.fillText( state.label, state.x, -1 * (state.y) );  
+            translate(state.canvas, state.frame);
+            state.canvas.font="14px Georgia";
+            state.canvas.fillStyle = TaxRates.socialsecurityFillStyle ;
+            state.canvas.fillText( state.topTopLabel, state.x, -1 * (state.topTopY) );  
+            state.canvas.fillText( state.topLabel, state.x, -1 * (state.topY) );  
+            state.canvas.fillText( state.label, state.x, -1 * (state.y) );  
         };
 
         var iterateFn = function() { 
@@ -858,7 +867,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an array of animate() calls, for each of the tax brackets.
      */
-    var buildSocialSecurityLineAnimation = function(income, ppdFn) {
+    var buildSocialSecurityLineAnimation = function(canvas, income, ppdFn) {
 
         var bracket = TaxRates.socialsecurity.single;
 
@@ -868,6 +877,7 @@ angular.module( "ItcApp", [] )
                       l: 0,
                       endLength: getSocialSecurityTaxLineLength(),
                       fillStyle: TaxRates.socialsecurityFillStyle,
+                      canvas: canvas,
                       frame: frame1,
                     };
                     
@@ -880,7 +890,7 @@ angular.module( "ItcApp", [] )
      * @return an animate() call for the medicare bracket.
      *
      */
-    var buildMedicareTaxBarAnimation = function(income, ppdFn) {
+    var buildMedicareTaxBarAnimation = function(canvas, income, ppdFn) {
 
         var bracket = TaxRates.medicare.single;
 
@@ -890,6 +900,7 @@ angular.module( "ItcApp", [] )
                       h: 0,
                       endHeight: ppdFn( TaxRates.getTaxedAmount(bracket, income) ),
                       fillStyle:  TaxRates.medicareFillStyle,
+                      canvas: canvas,
                       frame: frame1
                     };
 
@@ -906,7 +917,7 @@ angular.module( "ItcApp", [] )
      * @return an animate() call for medicare tax bar 
      *
      */
-    var buildTotalTaxMedicareTaxBarAnimation = function(income, ppdFn) {
+    var buildTotalTaxMedicareTaxBarAnimation = function(canvas, income, ppdFn) {
 
         // Configure initial state(s).
         var totalTaxedAmount = _.reduce(TaxRates.getBrackets(income),
@@ -925,6 +936,7 @@ angular.module( "ItcApp", [] )
                        h: 0,
                        endHeight: ppdFn( TaxRates.getTaxedAmount(bracket, income) ),
                        fillStyle:  TaxRates.medicareFillStyle,
+                       canvas: canvas,
                        frame: frame1
                      };
 
@@ -938,7 +950,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an animate() call, for medicare
      */
-    var buildMedicareTaxRateLabelAnimation = function(income, ppdFn) {
+    var buildMedicareTaxRateLabelAnimation = function(canvas, income, ppdFn) {
 
         var bracket = TaxRates.medicare.single;
 
@@ -949,16 +961,18 @@ angular.module( "ItcApp", [] )
                       x: getMedicareTaxBarX(),
                       topY: ppdFn( TaxRates.getBracketTop( bracket,income) ) + 7,
                       topTopY: ppdFn( TaxRates.getBracketTop( bracket,income) ) + 20,
-                      y: ppdFn( TaxRates.getBracketTop( bracket,income) ) - ppdFn( TaxRates.getTaxedAmount(bracket, income) ) - 15
+                      y: ppdFn( TaxRates.getBracketTop( bracket,income) ) - ppdFn( TaxRates.getTaxedAmount(bracket, income) ) - 15,
+                      canvas: canvas,
+                      frame: frame1
                     };
 
         var renderFn = function(state) {
-            translate(frame1);
-            canvas.font="14px Georgia";
-            canvas.fillStyle = TaxRates.medicareFillStyle;
-            canvas.fillText( state.topTopLabel, state.x, -1 * (state.topTopY) );  
-            canvas.fillText( state.topLabel, state.x, -1 * (state.topY) );  
-            canvas.fillText( state.label, state.x, -1 * (state.y) );  
+            translate(state.canvas, state.frame);
+            state.canvas.font="14px Georgia";
+            state.canvas.fillStyle = TaxRates.medicareFillStyle;
+            state.canvas.fillText( state.topTopLabel, state.x, -1 * (state.topTopY) );  
+            state.canvas.fillText( state.topLabel, state.x, -1 * (state.topY) );  
+            state.canvas.fillText( state.label, state.x, -1 * (state.y) );  
         };
 
         var iterateFn = function() { 
@@ -971,7 +985,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an array of animate() calls, for the medicare tax brackets.
      */
-    var buildMedicareLineAnimation = function(income, ppdFn) {
+    var buildMedicareLineAnimation = function(canvas, income, ppdFn) {
 
         var bracket = TaxRates.medicare.single;
 
@@ -981,6 +995,7 @@ angular.module( "ItcApp", [] )
                       l: 0,
                       endLength: getMedicareTaxLineLength(),
                       fillStyle: TaxRates.medicareFillStyle,
+                      canvas: canvas,
                       frame: frame1
                     };
                     
@@ -997,7 +1012,7 @@ angular.module( "ItcApp", [] )
      * @return an array of animate() calls, for each of the tax brackets.
      *
      */
-    var buildTotalTaxTaxBarAnimations = function(income, ppdFn, prevIncome) {
+    var buildTotalTaxTaxBarAnimations = function(canvas, income, ppdFn, prevIncome) {
 
         // Configure initial state(s).
         var prevTopPixel = 0;
@@ -1009,6 +1024,7 @@ angular.module( "ItcApp", [] )
                                               w: barWidth,
                                               h: shouldAnimate(bracket, income, prevIncome) ? 0 : endHeight,
                                               endHeight: endHeight,
+                                              canvas: canvas,
                                               frame: frame1
                                             };
                                 prevTopPixel = retMe.y + endHeight;
@@ -1027,7 +1043,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an array of animate() calls, for each of the tax brackets.
      */
-    var buildTaxBarAnimations = function(income, ppdFn, prevIncome) {
+    var buildTaxBarAnimations = function(canvas, income, ppdFn, prevIncome) {
 
         // Configure initial state(s).
         var states = _.map( TaxRates.getBrackets(income),
@@ -1038,6 +1054,7 @@ angular.module( "ItcApp", [] )
                                          w: barWidth,
                                          h: shouldAnimate(bracket, income, prevIncome) ? 0 : endHeight,
                                          endHeight: endHeight,
+                                         canvas: canvas,
                                          frame: frame1
                                        };
                             } );
@@ -1057,9 +1074,8 @@ angular.module( "ItcApp", [] )
      * @return an animate() call for withheld bar
      *
      */
-    var buildTaxWithheldBarAnimations = function(income, withheld, ppdFn) {
+    var buildTaxWithheldBarAnimations = function(canvas, income, withheld, ppdFn) {
 
-        // Configure initial state(s).
         var totalTaxedAmount = _.reduce(TaxRates.getBrackets(income), 
                                         function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, income); }, 
                                         0 );
@@ -1078,12 +1094,14 @@ angular.module( "ItcApp", [] )
             fillStyle1 = fillStyleBill;
         }
 
+        // Configure initial state(s).
         var states = [ {  x: getTaxWithheldBarX(),
                           y: 0 + 1,
                           w: barWidth,
                           h: 0,
                           endHeight: endHeight0,
                           fillStyle:  "#ddd",
+                          canvas: canvas,
                           frame: frame1
                        } ,
                        { 
@@ -1093,6 +1111,7 @@ angular.module( "ItcApp", [] )
                           h: 0,
                           endHeight: endHeight1,
                           fillStyle: fillStyle1,
+                          canvas: canvas,
                           frame: frame1
                        }
                     ];
@@ -1105,7 +1124,7 @@ angular.module( "ItcApp", [] )
     /**
      * @return an animate call for the effective tax
      */
-    var buildTaxWithheldLabelAnimation = function(income, withheld, ppdFn) {
+    var buildTaxWithheldLabelAnimation = function(canvas, income, withheld, ppdFn) {
 
         // compute total taxed amount
         var totalTaxedAmount = _.reduce(TaxRates.getBrackets(income), 
@@ -1128,15 +1147,17 @@ angular.module( "ItcApp", [] )
                         // y: ppdFn( Math.min(bracket.top,income) ) - 15 } ;
                         y: ppdFn( Math.max( totalTaxedAmount, withheld)) + (TaxRates.getBrackets(income).length + 2) + 5 , // account for extra pixesl between brackets
                         // topY: ppdFn( totalTaxedAmount ) + 20
-                        fillStyle: fillStyle
+                        fillStyle: fillStyle,
+                        canvas: canvas,
+                        frame: frame1
                     } ;
 
         var renderFn = function(state) {
-            translate(frame1);
-            canvas.font="16px Georgia";
-            canvas.fillStyle = state.fillStyle;
-            canvas.fillText( state.label, state.x, -1 * (state.y) );  
-            // canvas.fillText( state.topLabel, state.x, -1 * (state.topY) );  
+            translate(state.canvas, state.frame);
+            state.canvas.font="16px Georgia";
+            state.canvas.fillStyle = state.fillStyle;
+            state.canvas.fillText( state.label, state.x, -1 * (state.y) );  
+            // state.canvas.fillText( state.topLabel, state.x, -1 * (state.topY) );  
         };
 
         var iterateFn = function() { 
@@ -1145,126 +1166,6 @@ angular.module( "ItcApp", [] )
 
         return _.partial(animate, renderFn, iterateFn, state); 
     };
-
-    // -rx- /**
-    // -rx-  * TODO: get rid of this.  use refresh instead.
-    // -rx-  *
-    // -rx-  * Draw on the canvas.
-    // -rx-  * @return promise that is resolved when all animations are complete.
-    // -rx-  */
-    // -rx- var redraw = function(income, withheld, deduction) {
-
-    // -rx-     logger.fine("redraw: ");
-
-    // -rx-     clear();
-
-    // -rx-     drawIncomeAxis();
-    // -rx-     drawXAxis();
-    // -rx-     drawXAxisLabels();
-
-    // -rx-     income = income || 100000;
-    // -rx-     withheld = withheld || 30000;
-    // -rx-     deduction = deduction || TaxRates.deductions.single;
-    // -rx-     var taxableIncome = income - deduction;
-    // -rx-     var ppdFn = Projector.ppd( getHeight() - 50, income);    // pixel height of income bar
-
-    // -rx-     // Initialize an empty promise.  It will be resolved immediately and will 
-    // -rx-     // kick off the animations (attached via then()).
-    // -rx-     var afterMe = Promise.resolve(1);
-
-    // -rx-     // Build the animation functions
-    // -rx-     // Deduction bar is built separate but follows the taxable-income bars
-    // -rx-     var incomeBarAnimations = buildIncomeBarAnimations(taxableIncome, ppdFn);
-    // -rx-     var bracketLineAnimations = buildBracketLineAnimations(taxableIncome, ppdFn);
-    // -rx-     var bracketLabelAnimations = buildBracketLabelAnimations(taxableIncome, ppdFn);
-
-    // -rx-     // Group together animations that will run in parallel
-    // -rx-     // An income-bar animation runs at the same time as the PREVIOUS bracket-line and bracket-label animations.
-    // -rx-     for (var i=0; i < incomeBarAnimations.length; ++i) {
-    // -rx-         // Note: not reassigning afterMe.
-    // -rx-         if (i > 0) {
-    // -rx-             runInParallel( afterMe, 
-    // -rx-                            bracketLineAnimations[i-1], 
-    // -rx-                            bracketLabelAnimations[i-1]
-    // -rx-                          );
-    // -rx-         }
-    // -rx-         afterMe = runInParallel( afterMe, 
-    // -rx-                                  incomeBarAnimations[i]
-    // -rx-                                 );
-    // -rx-     }
-
-    // -rx-     // Note: not reassigning afterMe.
-    // -rx-     runInParallel(afterMe, 
-    // -rx-                   bracketLineAnimations[i-1], 
-    // -rx-                   bracketLabelAnimations[i-1] 
-    // -rx-                  ); 
-
-    // -rx-     afterMe = runInParallel(afterMe, 
-    // -rx-                             buildDeductionBarAnimation(income, deduction, ppdFn)
-    // -rx-                            );
-
-    // -rx-     afterMe = runInParallel( afterMe, 
-    // -rx-                              buildIncomeLineAnimation(income, ppdFn),
-    // -rx-                              buildIncomeLabelAnimation(income, ppdFn) 
-    // -rx-                            );
-
-    // -rx-     // Tax bar animations
-    // -rx-     var taxBarAnimations = buildTaxBarAnimations(taxableIncome, ppdFn); 
-    // -rx-     var totalTaxTaxBarAnimations = buildTotalTaxTaxBarAnimations(taxableIncome, ppdFn); 
-    // -rx-     var taxBarLabelAnimations = buildBracketTaxRateLabelAnimations(taxableIncome, ppdFn) 
-
-    // -rx-     // Kick off the social security bracket line at the same time as the first
-    // -rx-     // tax bar animtations.
-    // -rx-     //
-    // -rx-     // Note I'm not reassigning afterMe... so the social security line will run in
-    // -rx-     // parallel with the tax bar animations below.
-    // -rx-     var socialSecuritySequence = runInParallel( afterMe, 
-    // -rx-                                                 buildSocialSecurityLineAnimation(taxableIncome,ppdFn)
-    // -rx-                                                );
-
-    // -rx-     // Kick off medicare sequence.
-    // -rx-     var medicareSequence = runInParallel( afterMe,  
-    // -rx-                                           buildMedicareLineAnimation(taxableIncome, ppdFn) 
-    // -rx-                                          );
-
-
-    // -rx-     for (var i=0; i < taxBarAnimations.length; ++i) {
-    // -rx-         afterMe = runInParallel( afterMe,  
-    // -rx-                                  taxBarAnimations[i],
-    // -rx-                                  totalTaxTaxBarAnimations[i] 
-    // -rx-                                );
-    // -rx-         afterMe = runInParallel( afterMe,
-    // -rx-                                  taxBarLabelAnimations[i]
-    // -rx-                                );
-    // -rx-     } 
-
-
-    // -rx-     // Note: joins with socialSecuritySequence
-    // -rx-     afterMe = runInParallel( socialSecuritySequence, 
-    // -rx-                              buildSocialSecurityTaxBarAnimation(taxableIncome, ppdFn), 
-    // -rx-                              buildTotalTaxSocialSecurityTaxBarAnimation(taxableIncome, ppdFn)
-    // -rx-                            );
-
-    // -rx-     afterMe = runInParallel( afterMe,  
-    // -rx-                              buildSocialSecurityTaxRateLabelAnimation(taxableIncome, ppdFn) 
-    // -rx-                            );
-
-    // -rx-     afterMe = runInParallel( medicareSequence,
-    // -rx-                              buildMedicareTaxBarAnimation(taxableIncome, ppdFn), 
-    // -rx-                              buildTotalTaxMedicareTaxBarAnimation(taxableIncome, ppdFn) 
-    // -rx-                            );
-
-    // -rx-     afterMe = runInSequence( afterMe, 
-    // -rx-                              buildMedicareTaxRateLabelAnimation(taxableIncome, ppdFn) ,
-    // -rx-                              buildTotalTaxRateLabelAnimation(income, taxableIncome, ppdFn) ,
-    // -rx-                              buildTaxWithheldBarAnimations(taxableIncome, withheld, ppdFn),
-    // -rx-                              buildTaxWithheldLabelAnimation(taxableIncome, withheld, ppdFn) 
-    // -rx-                            );
-
-    // -rx-     return afterMe;
-    // -rx-     
-    // -rx- };
-
 
     /**
      * Partition the animations according to the animateFlags.
@@ -1286,7 +1187,6 @@ angular.module( "ItcApp", [] )
                                            return animTuple[0];
                                        });
                       } );
-
     };
 
     /**
@@ -1330,14 +1230,16 @@ angular.module( "ItcApp", [] )
                               + ", prevTaxableIncome=" + prevTaxableIncome );
 
 
-        // TODO: create new canvas element and new canvas context, but don't
-        //       replace existing canvas element until the end of this function.
+        // Create new canvas element and new canvas context, but don't
+        // replace existing canvas element until the end of this function.
+        theCanvasElement = createCanvasElement();
+        var canvas = theCanvasElement.getContext("2d");
 
+        // set parm defaults
         income = income || 100000;
         withheld = withheld || 30000;
         deduction = deduction || TaxRates.deductions.single;
         var taxableIncome = income - deduction;
-
         var ppdFn = Projector.ppd( getHeight() - 50, income);    // pixel height of income bar
 
         // Initialize an empty promise.  It will be resolved immediately and will 
@@ -1354,13 +1256,13 @@ angular.module( "ItcApp", [] )
         // Build the animation functions
         // Deduction bar is built separate but follows the taxable-income bars
         
-        var incomeBarAnimations = buildIncomeBarAnimations(taxableIncome, ppdFn, prevTaxableIncome);
+        var incomeBarAnimations = buildIncomeBarAnimations(canvas, taxableIncome, ppdFn, prevTaxableIncome);
         incomeBarAnimations = partitionAndAttach( start, incomeBarAnimations, animateBracketsFlags );
 
-        var bracketLineAnimations = buildBracketLineAnimations(taxableIncome, ppdFn, prevTaxableIncome);
+        var bracketLineAnimations = buildBracketLineAnimations(canvas, taxableIncome, ppdFn, prevTaxableIncome);
         bracketLineAnimations = partitionAndAttach( start, bracketLineAnimations, animateBracketsFlags );
 
-        var bracketLabelAnimations = buildBracketLabelAnimations(taxableIncome, ppdFn);
+        var bracketLabelAnimations = buildBracketLabelAnimations(canvas, taxableIncome, ppdFn);
         bracketLabelAnimations = partitionAndAttach( start, bracketLabelAnimations, animateBracketsFlags );
 
 
@@ -1388,22 +1290,22 @@ angular.module( "ItcApp", [] )
 
         // Deduction bar and income line will always need to be refreshed
         afterMe = runInParallel(afterMe, 
-                                buildDeductionBarAnimation(income, deduction, ppdFn)
+                                buildDeductionBarAnimation(canvas, income, deduction, ppdFn)
                                );
 
         afterMe = runInParallel( afterMe, 
-                                 buildIncomeLineAnimation(income, ppdFn),
-                                 buildIncomeLabelAnimation(income, ppdFn) 
+                                 buildIncomeLineAnimation(canvas, income, ppdFn),
+                                 buildIncomeLabelAnimation(canvas, income, ppdFn) 
                                );
 
         // Tax bar animations
-        var taxBarAnimations = buildTaxBarAnimations(taxableIncome, ppdFn, prevTaxableIncome); 
+        var taxBarAnimations = buildTaxBarAnimations(canvas, taxableIncome, ppdFn, prevTaxableIncome); 
         taxBarAnimations = partitionAndAttach( start, taxBarAnimations, animateBracketsFlags );
 
-        var totalTaxTaxBarAnimations = buildTotalTaxTaxBarAnimations(taxableIncome, ppdFn, prevTaxableIncome); 
+        var totalTaxTaxBarAnimations = buildTotalTaxTaxBarAnimations(canvas, taxableIncome, ppdFn, prevTaxableIncome); 
         totalTaxTaxBarAnimations = partitionAndAttach( start, totalTaxTaxBarAnimations, animateBracketsFlags );
 
-        var taxBarLabelAnimations = buildBracketTaxRateLabelAnimations(taxableIncome, ppdFn) 
+        var taxBarLabelAnimations = buildBracketTaxRateLabelAnimations(canvas, taxableIncome, ppdFn) 
         taxBarLabelAnimations = partitionAndAttach( start, taxBarLabelAnimations, animateBracketsFlags );
 
         // Kick off the social security bracket line at the same time as the first
@@ -1412,12 +1314,12 @@ angular.module( "ItcApp", [] )
         // Note I'm not reassigning afterMe... so the social security line will run in
         // parallel with the tax bar animations below.
         var socialSecuritySequence = runInParallel( afterMe, 
-                                                    buildSocialSecurityLineAnimation(taxableIncome,ppdFn)
+                                                    buildSocialSecurityLineAnimation(canvas, taxableIncome,ppdFn)
                                                    );
 
         // Kick off medicare sequence.
         var medicareSequence = runInParallel( afterMe,  
-                                              buildMedicareLineAnimation(taxableIncome, ppdFn) 
+                                              buildMedicareLineAnimation(canvas, taxableIncome, ppdFn) 
                                              );
 
 
@@ -1431,43 +1333,47 @@ angular.module( "ItcApp", [] )
                                    );
         } 
 
-
         // Note: joins with socialSecuritySequence
         afterMe = runInParallel( socialSecuritySequence, 
-                                 buildSocialSecurityTaxBarAnimation(taxableIncome, ppdFn), 
-                                 buildTotalTaxSocialSecurityTaxBarAnimation(taxableIncome, ppdFn)
+                                 buildSocialSecurityTaxBarAnimation(canvas, taxableIncome, ppdFn), 
+                                 buildTotalTaxSocialSecurityTaxBarAnimation(canvas, taxableIncome, ppdFn)
                                );
 
         afterMe = runInParallel( afterMe,  
-                                 buildSocialSecurityTaxRateLabelAnimation(taxableIncome, ppdFn) 
+                                 buildSocialSecurityTaxRateLabelAnimation(canvas, taxableIncome, ppdFn) 
                                );
 
         afterMe = runInParallel( medicareSequence,
-                                 buildMedicareTaxBarAnimation(taxableIncome, ppdFn), 
-                                 buildTotalTaxMedicareTaxBarAnimation(taxableIncome, ppdFn) 
+                                 buildMedicareTaxBarAnimation(canvas, taxableIncome, ppdFn), 
+                                 buildTotalTaxMedicareTaxBarAnimation(canvas, taxableIncome, ppdFn) 
                                );
 
         afterMe = runInSequence( afterMe, 
-                                 buildMedicareTaxRateLabelAnimation(taxableIncome, ppdFn) ,
-                                 buildTotalTaxRateLabelAnimation(income, taxableIncome, ppdFn) ,
-                                 buildTaxWithheldBarAnimations(taxableIncome, withheld, ppdFn),
-                                 buildTaxWithheldLabelAnimation(taxableIncome, withheld, ppdFn) 
+                                 buildMedicareTaxRateLabelAnimation(canvas, taxableIncome, ppdFn) ,
+                                 buildTotalTaxRateLabelAnimation(canvas, income, taxableIncome, ppdFn) ,
+                                 buildTaxWithheldBarAnimations(canvas, taxableIncome, withheld, ppdFn),
+                                 buildTaxWithheldLabelAnimation(canvas, taxableIncome, withheld, ppdFn) 
                                );
 
+        
+        // Draw axes and labels.
+        drawIncomeAxis( canvas, frame1 );
+        drawXAxis( canvas, frame1 );
+        drawXAxisLabels( canvas, frame0 );
 
-        // Wait till the end to clear and init the canvas
+        // Wait till the end to replace the on-screen canvas element with the new one 
+        // we created in this function.
+        //
+        // By replacing the entire canvas for every refresh() we ensure that animations
+        // from a previous refresh() that have yet to complete won't interfere with the
+        // animations for the current refresh().  (Animations from a previous refresh
+        // will continue to run but their canvas element is no longer visible).
+        //
         // Note that all the animations we built above do NOT get run until
         // after this method ends (when the "start" promise gets resovled).
-        // TODO: instead - create new canvas element (to pass to the above animations),
-        //       then replace the old canvas with the new one right here.
-        clear();
-
-        drawIncomeAxis( canvas );
-        drawXAxis( canvas );
-        drawXAxisLabels( canvas );
+        replaceCanvasElement( theCanvasElement );
 
         return afterMe;
-        
     };
 
 
@@ -1476,7 +1382,6 @@ angular.module( "ItcApp", [] )
      * Export API
      */
     return {
-        // -rx- redraw: redraw,
         refresh: refresh,
         getWidth: getWidth,
         getHeight: getHeight
