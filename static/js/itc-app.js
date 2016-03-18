@@ -21,10 +21,13 @@ angular.module( "ItcApp", [] )
                                + ", $scope.inputDeduction=" + $scope.inputDeduction);
 
          if (prevIncome != $scope.inputIncome) {
-             redrawCanvas();
-         } else {
-             refreshCanvas();
+             // redraw everything (need to re-scale since the total income changed)
+             prevTaxableIncome = 0;
+         // -rx-     redrawCanvas();
+         // -rx- } else {
+         // -rx-     refreshCanvas();
          }
+         refreshCanvas();
     }
 
 
@@ -34,7 +37,8 @@ angular.module( "ItcApp", [] )
     var onLoad = function() {
         logger.fine("onLoad: entry");
 
-        redrawCanvas();
+        // -rx- redrawCanvas();
+        refreshCanvas();
     }
 
     /**
@@ -51,18 +55,18 @@ angular.module( "ItcApp", [] )
          prevTaxableIncome = $scope.inputIncome - $scope.inputDeduction;
     };
 
-    /**
-     *
-     */
-    var redrawCanvas = function() {
-        TheCanvas.redraw( parseInt( $scope.inputIncome),
-                          parseInt( $scope.inputTaxWithheld ),
-                          parseInt( $scope.inputDeduction ) );
+    // -rx- /**
+    // -rx-  *
+    // -rx-  */
+    // -rx- var redrawCanvas = function() {
+    // -rx-     TheCanvas.redraw( parseInt( $scope.inputIncome),
+    // -rx-                       parseInt( $scope.inputTaxWithheld ),
+    // -rx-                       parseInt( $scope.inputDeduction ) );
 
-        prevIncome = $scope.inputIncome;
-        prevTaxableIncome = $scope.inputIncome - $scope.inputDeduction;
-        // Projector.drawIncomeBar( 100000 );
-    };
+    // -rx-     prevIncome = $scope.inputIncome;
+    // -rx-     prevTaxableIncome = $scope.inputIncome - $scope.inputDeduction;
+    // -rx-     // Projector.drawIncomeBar( 100000 );
+    // -rx- };
 
     /**
      * Export to scope
@@ -126,11 +130,9 @@ angular.module( "ItcApp", [] )
     var logger = Logger.getLogger("TheCanvas", {info: true} );
     logger.info("alive!");
 
-    var theCanvasElement = document.getElementById("itc-canvas");
-    var canvas = theCanvasElement.getContext("2d");
-
     /**
      * TODO
+     * The x-coord for the vertical income axis line
      */
     var incomeAxisX = 150;
 
@@ -143,14 +145,42 @@ angular.module( "ItcApp", [] )
     var barWidth = 100;
 
     /**
-     * @return the width of the canvas element
+     * Create a new canvas element and replace the old one in the DOM.
+     *
+     * TODO: the purpose of a brand new canvas element is to ensure that 
+     *       leftover animations from a previous refresh() do not
+     *       interfere with the current refresh() (since they're 
+     *       operating an a now-defunct canvas element that's been replaced).
+     *
+     * @return the new canvas element
+     */
+    var createCanvasElement = function() {
+
+        var oldCanvasElement = document.getElementById("itc-canvas");
+
+        var newCanvasElement = document.createElement("canvas");
+        newCanvasElement.id = "itc-canvas";
+        newCanvasElement.setAttribute("width","800");
+        newCanvasElement.setAttribute("height","600");
+
+        document.getElementById("itc-canvas-parent").replaceChild( newCanvasElement, oldCanvasElement );
+
+        return newCanvasElement;
+    };
+
+    // -rx- var theCanvasElement = document.getElementById("itc-canvas");
+    var theCanvasElement = createCanvasElement();
+    var canvas = theCanvasElement.getContext("2d");
+
+    /**
+     * @return the width of the <canvas> element
      */
     var getWidth = function() {
         return theCanvasElement.width;
     };
 
     /**
-     * @return the height of the canvas element
+     * @return the height of the <canvas> element
      */
     var getHeight = function() {
         return theCanvasElement.height;
@@ -240,9 +270,11 @@ angular.module( "ItcApp", [] )
     };
 
     /**
-     * fully clear the canvas
+     * fully clear the canvas context
      */
     var clear = function() {
+        theCanvasElement = createCanvasElement();
+        canvas = theCanvasElement.getContext("2d");
         canvas.translate(0,0);
         canvas.clearRect( 0, 0, getWidth(), getHeight() );
     };
@@ -250,7 +282,7 @@ angular.module( "ItcApp", [] )
     /**
      * Draw a line from from to to.
      */
-    var drawLine = function(from, to) {
+    var drawLine = function(canvas, from, to) {
         canvas.moveTo( from.x, from.y);
         canvas.lineTo( to.x,  to.y);
         canvas.stroke();
@@ -312,7 +344,8 @@ angular.module( "ItcApp", [] )
         canvas.beginPath();
         canvas.strokeStyle = state.fillStyle;
         canvas.lineWidth = 0.5;
-        drawLine( { x: state.x,            y: -state.y },
+        drawLine( canvas,
+                  { x: state.x,            y: -state.y },
                   { x: state.x + state.l,  y: -state.y } );
     };
 
@@ -402,14 +435,15 @@ angular.module( "ItcApp", [] )
     /**
      * Draw the vertical income axis.
      */
-    var drawIncomeAxis = function() {
+    var drawIncomeAxis = function( canvas ) {
         canvas.save();
 
         translate( frame1 ); 
         canvas.beginPath();
         canvas.strokeStyle = "#888888";
         canvas.lineWidth = 1;
-        drawLine( {x: getIncomeAxisX(), y: 0}, 
+        drawLine( canvas,
+                  {x: getIncomeAxisX(), y: 0}, 
                   {x: getIncomeAxisX(),  y: -1 * ( getHeight() - 25 ) } );
 
         canvas.restore();
@@ -418,14 +452,15 @@ angular.module( "ItcApp", [] )
     /**
      * Draw a solid x axis.
      */
-    var drawXAxis = function() {
+    var drawXAxis = function( canvas ) {
         canvas.save();
 
         translate( frame1 ); 
         canvas.beginPath();
         canvas.strokeStyle = "#888888";
         canvas.lineWidth = 1;
-        drawLine( {x: getIncomeAxisX(), y: 0}, 
+        drawLine( canvas,
+                  {x: getIncomeAxisX(), y: 0}, 
                   {x: getTaxWithheldBarX() + 120,  y: 0 } );
 
         canvas.restore();
@@ -435,7 +470,7 @@ angular.module( "ItcApp", [] )
     /**
      * Draw x-axis labels
      */
-    var drawXAxisLabels = function() {
+    var drawXAxisLabels = function( canvas ) {
         canvas.save();
 
         translate(frame0);
@@ -1111,122 +1146,124 @@ angular.module( "ItcApp", [] )
         return _.partial(animate, renderFn, iterateFn, state); 
     };
 
-    /**
-     * Draw on the canvas.
-     * @return promise that is resolved when all animations are complete.
-     */
-    var redraw = function(income, withheld, deduction) {
+    // -rx- /**
+    // -rx-  * TODO: get rid of this.  use refresh instead.
+    // -rx-  *
+    // -rx-  * Draw on the canvas.
+    // -rx-  * @return promise that is resolved when all animations are complete.
+    // -rx-  */
+    // -rx- var redraw = function(income, withheld, deduction) {
 
-        logger.fine("redraw: theCanvasElement.height=" + theCanvasElement.height + ", theCanvasElement.width=" + theCanvasElement.width);
+    // -rx-     logger.fine("redraw: ");
 
-        clear();
+    // -rx-     clear();
 
-        drawIncomeAxis();
-        drawXAxis();
-        drawXAxisLabels();
+    // -rx-     drawIncomeAxis();
+    // -rx-     drawXAxis();
+    // -rx-     drawXAxisLabels();
 
-        income = income || 100000;
-        withheld = withheld || 30000;
-        deduction = deduction || TaxRates.deductions.single;
-        var taxableIncome = income - deduction;
-        var ppdFn = Projector.ppd( getHeight() - 50, income);    // pixel height of income bar
+    // -rx-     income = income || 100000;
+    // -rx-     withheld = withheld || 30000;
+    // -rx-     deduction = deduction || TaxRates.deductions.single;
+    // -rx-     var taxableIncome = income - deduction;
+    // -rx-     var ppdFn = Projector.ppd( getHeight() - 50, income);    // pixel height of income bar
 
-        // Initialize an empty promise.  It will be resolved immediately and will 
-        // kick off the animations (attached via then()).
-        var afterMe = Promise.resolve(1);
+    // -rx-     // Initialize an empty promise.  It will be resolved immediately and will 
+    // -rx-     // kick off the animations (attached via then()).
+    // -rx-     var afterMe = Promise.resolve(1);
 
-        // Build the animation functions
-        // Deduction bar is built separate but follows the taxable-income bars
-        var incomeBarAnimations = buildIncomeBarAnimations(taxableIncome, ppdFn);
-        var bracketLineAnimations = buildBracketLineAnimations(taxableIncome, ppdFn);
-        var bracketLabelAnimations = buildBracketLabelAnimations(taxableIncome, ppdFn);
+    // -rx-     // Build the animation functions
+    // -rx-     // Deduction bar is built separate but follows the taxable-income bars
+    // -rx-     var incomeBarAnimations = buildIncomeBarAnimations(taxableIncome, ppdFn);
+    // -rx-     var bracketLineAnimations = buildBracketLineAnimations(taxableIncome, ppdFn);
+    // -rx-     var bracketLabelAnimations = buildBracketLabelAnimations(taxableIncome, ppdFn);
 
-        // Group together animations that will run in parallel
-        // An income-bar animation runs at the same time as the PREVIOUS bracket-line and bracket-label animations.
-        for (var i=0; i < incomeBarAnimations.length; ++i) {
-            // Note: not reassigning afterMe.
-            if (i > 0) {
-                runInParallel( afterMe, 
-                               bracketLineAnimations[i-1], 
-                               bracketLabelAnimations[i-1]
-                             );
-            }
-            afterMe = runInParallel( afterMe, 
-                                     incomeBarAnimations[i]
-                                    );
-        }
+    // -rx-     // Group together animations that will run in parallel
+    // -rx-     // An income-bar animation runs at the same time as the PREVIOUS bracket-line and bracket-label animations.
+    // -rx-     for (var i=0; i < incomeBarAnimations.length; ++i) {
+    // -rx-         // Note: not reassigning afterMe.
+    // -rx-         if (i > 0) {
+    // -rx-             runInParallel( afterMe, 
+    // -rx-                            bracketLineAnimations[i-1], 
+    // -rx-                            bracketLabelAnimations[i-1]
+    // -rx-                          );
+    // -rx-         }
+    // -rx-         afterMe = runInParallel( afterMe, 
+    // -rx-                                  incomeBarAnimations[i]
+    // -rx-                                 );
+    // -rx-     }
 
-        // Note: not reassigning afterMe.
-        runInParallel(afterMe, 
-                      bracketLineAnimations[i-1], 
-                      bracketLabelAnimations[i-1] 
-                     ); 
+    // -rx-     // Note: not reassigning afterMe.
+    // -rx-     runInParallel(afterMe, 
+    // -rx-                   bracketLineAnimations[i-1], 
+    // -rx-                   bracketLabelAnimations[i-1] 
+    // -rx-                  ); 
 
-        afterMe = runInParallel(afterMe, 
-                                buildDeductionBarAnimation(income, deduction, ppdFn)
-                               );
+    // -rx-     afterMe = runInParallel(afterMe, 
+    // -rx-                             buildDeductionBarAnimation(income, deduction, ppdFn)
+    // -rx-                            );
 
-        afterMe = runInParallel( afterMe, 
-                                 buildIncomeLineAnimation(income, ppdFn),
-                                 buildIncomeLabelAnimation(income, ppdFn) 
-                               );
+    // -rx-     afterMe = runInParallel( afterMe, 
+    // -rx-                              buildIncomeLineAnimation(income, ppdFn),
+    // -rx-                              buildIncomeLabelAnimation(income, ppdFn) 
+    // -rx-                            );
 
-        // Tax bar animations
-        var taxBarAnimations = buildTaxBarAnimations(taxableIncome, ppdFn); 
-        var totalTaxTaxBarAnimations = buildTotalTaxTaxBarAnimations(taxableIncome, ppdFn); 
-        var taxBarLabelAnimations = buildBracketTaxRateLabelAnimations(taxableIncome, ppdFn) 
+    // -rx-     // Tax bar animations
+    // -rx-     var taxBarAnimations = buildTaxBarAnimations(taxableIncome, ppdFn); 
+    // -rx-     var totalTaxTaxBarAnimations = buildTotalTaxTaxBarAnimations(taxableIncome, ppdFn); 
+    // -rx-     var taxBarLabelAnimations = buildBracketTaxRateLabelAnimations(taxableIncome, ppdFn) 
 
-        // Kick off the social security bracket line at the same time as the first
-        // tax bar animtations.
-        //
-        // Note I'm not reassigning afterMe... so the social security line will run in
-        // parallel with the tax bar animations below.
-        var socialSecuritySequence = runInParallel( afterMe, 
-                                                    buildSocialSecurityLineAnimation(taxableIncome,ppdFn)
-                                                   );
+    // -rx-     // Kick off the social security bracket line at the same time as the first
+    // -rx-     // tax bar animtations.
+    // -rx-     //
+    // -rx-     // Note I'm not reassigning afterMe... so the social security line will run in
+    // -rx-     // parallel with the tax bar animations below.
+    // -rx-     var socialSecuritySequence = runInParallel( afterMe, 
+    // -rx-                                                 buildSocialSecurityLineAnimation(taxableIncome,ppdFn)
+    // -rx-                                                );
 
-        // Kick off medicare sequence.
-        var medicareSequence = runInParallel( afterMe,  
-                                              buildMedicareLineAnimation(taxableIncome, ppdFn) 
-                                             );
-
-
-        for (var i=0; i < taxBarAnimations.length; ++i) {
-            afterMe = runInParallel( afterMe,  
-                                     taxBarAnimations[i],
-                                     totalTaxTaxBarAnimations[i] 
-                                   );
-            afterMe = runInParallel( afterMe,
-                                     taxBarLabelAnimations[i]
-                                   );
-        } 
+    // -rx-     // Kick off medicare sequence.
+    // -rx-     var medicareSequence = runInParallel( afterMe,  
+    // -rx-                                           buildMedicareLineAnimation(taxableIncome, ppdFn) 
+    // -rx-                                          );
 
 
-        // Note: joins with socialSecuritySequence
-        afterMe = runInParallel( socialSecuritySequence, 
-                                 buildSocialSecurityTaxBarAnimation(taxableIncome, ppdFn), 
-                                 buildTotalTaxSocialSecurityTaxBarAnimation(taxableIncome, ppdFn)
-                               );
+    // -rx-     for (var i=0; i < taxBarAnimations.length; ++i) {
+    // -rx-         afterMe = runInParallel( afterMe,  
+    // -rx-                                  taxBarAnimations[i],
+    // -rx-                                  totalTaxTaxBarAnimations[i] 
+    // -rx-                                );
+    // -rx-         afterMe = runInParallel( afterMe,
+    // -rx-                                  taxBarLabelAnimations[i]
+    // -rx-                                );
+    // -rx-     } 
 
-        afterMe = runInParallel( afterMe,  
-                                 buildSocialSecurityTaxRateLabelAnimation(taxableIncome, ppdFn) 
-                               );
 
-        afterMe = runInParallel( medicareSequence,
-                                 buildMedicareTaxBarAnimation(taxableIncome, ppdFn), 
-                                 buildTotalTaxMedicareTaxBarAnimation(taxableIncome, ppdFn) 
-                               );
+    // -rx-     // Note: joins with socialSecuritySequence
+    // -rx-     afterMe = runInParallel( socialSecuritySequence, 
+    // -rx-                              buildSocialSecurityTaxBarAnimation(taxableIncome, ppdFn), 
+    // -rx-                              buildTotalTaxSocialSecurityTaxBarAnimation(taxableIncome, ppdFn)
+    // -rx-                            );
 
-        afterMe = runInSequence( afterMe, 
-                                 buildMedicareTaxRateLabelAnimation(taxableIncome, ppdFn) ,
-                                 buildTotalTaxRateLabelAnimation(income, taxableIncome, ppdFn) ,
-                                 buildTaxWithheldBarAnimations(taxableIncome, withheld, ppdFn),
-                                 buildTaxWithheldLabelAnimation(taxableIncome, withheld, ppdFn) 
-                               );
+    // -rx-     afterMe = runInParallel( afterMe,  
+    // -rx-                              buildSocialSecurityTaxRateLabelAnimation(taxableIncome, ppdFn) 
+    // -rx-                            );
 
-        return afterMe;
-        
-    };
+    // -rx-     afterMe = runInParallel( medicareSequence,
+    // -rx-                              buildMedicareTaxBarAnimation(taxableIncome, ppdFn), 
+    // -rx-                              buildTotalTaxMedicareTaxBarAnimation(taxableIncome, ppdFn) 
+    // -rx-                            );
+
+    // -rx-     afterMe = runInSequence( afterMe, 
+    // -rx-                              buildMedicareTaxRateLabelAnimation(taxableIncome, ppdFn) ,
+    // -rx-                              buildTotalTaxRateLabelAnimation(income, taxableIncome, ppdFn) ,
+    // -rx-                              buildTaxWithheldBarAnimations(taxableIncome, withheld, ppdFn),
+    // -rx-                              buildTaxWithheldLabelAnimation(taxableIncome, withheld, ppdFn) 
+    // -rx-                            );
+
+    // -rx-     return afterMe;
+    // -rx-     
+    // -rx- };
 
 
     /**
@@ -1277,7 +1314,11 @@ angular.module( "ItcApp", [] )
 
     /**
      * "Refresh" the canvas in response to updated data.
+     *
      * Not all animations are run. Only for parts of the chart that need to be updated.
+     *
+     * Note the entire canvas is in fact redrawn... it's just that any drawings that
+     * don't need to be animated are drawn in their entirety immediately.
      *
      * @return promise that is resolved when all animations are complete.
      */
@@ -1288,6 +1329,9 @@ angular.module( "ItcApp", [] )
                               + ", deduction=" + deduction
                               + ", prevTaxableIncome=" + prevTaxableIncome );
 
+
+        // TODO: create new canvas element and new canvas context, but don't
+        //       replace existing canvas element until the end of this function.
 
         income = income || 100000;
         withheld = withheld || 30000;
@@ -1414,11 +1458,13 @@ angular.module( "ItcApp", [] )
         // Wait till the end to clear and init the canvas
         // Note that all the animations we built above do NOT get run until
         // after this method ends (when the "start" promise gets resovled).
+        // TODO: instead - create new canvas element (to pass to the above animations),
+        //       then replace the old canvas with the new one right here.
         clear();
 
-        drawIncomeAxis();
-        drawXAxis();
-        drawXAxisLabels();
+        drawIncomeAxis( canvas );
+        drawXAxis( canvas );
+        drawXAxisLabels( canvas );
 
         return afterMe;
         
@@ -1430,7 +1476,7 @@ angular.module( "ItcApp", [] )
      * Export API
      */
     return {
-        redraw: redraw,
+        // -rx- redraw: redraw,
         refresh: refresh,
         getWidth: getWidth,
         getHeight: getHeight

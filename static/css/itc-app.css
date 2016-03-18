@@ -46,17 +46,17 @@ em {
     padding-top: 3px;
 }
 
-.itc-explain {
+.itc-help {
     font-size: smaller;
     color: #888;
     margin-top: 10px;
 }
 
-.itc-explain hr {
+.itc-help hr {
     margin-top: 5px;
 }
 
-.itc-explain ul {
+.itc-help ul {
     padding-left: 25px;
 }
 
@@ -65,6 +65,12 @@ em {
     font-weight: bold;
     font-size: small;
 }
+
+.itc-label small {
+    color: #888;
+    font-weight: normal;
+}
+
 
 .itc-label-right {
     float: right;

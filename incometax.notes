@@ -1,11 +1,22 @@
 
 
-==== scale ====================================================================================================
+==== todo ====================================================================================================
 
-TODO: establish scale - map income value to pixels
-      e.g. the canvas is 600 pixels high
-      the user enters 50K for income
-      simple: 50K / 600 = $/pixel
+TODO: add buffer room at top of income (maybe 5%) when scaling the size of the income bar 
+      so small increments in income (e.g. dividend income) doesn't force an entire redraw of the canvas
+
+TODO: personal exemption ($4000 for 2015).  this is another deduction (can be used in addition to standard deduction/itemized deduction)
+
+TODO: form 1040 - individual income tax return form
+
+TODO: canvas drawing from prev form continues after form refresh
+      need to cancel them all or replace the canvas element or something.
+
+TODO: medicare and ss taxes apply to full income (401k deferrals do not apply) (w2 box 5)
+      federal income tax applies to income - 401k deferrals (w2 box 1)
+      w2 box 1 = w2 box 5 - w2 box 12 or 14
+
+TODO: additional medicare taxes for high earners: http://taxes.about.com/od/payroll/a/Medicare-Tax.htm
 
 
 
