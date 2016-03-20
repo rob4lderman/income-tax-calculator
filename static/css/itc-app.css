@@ -1,7 +1,8 @@
 
-input {
+.itc-input {
     background-color: #ffffd0 !important;
     color: #48c !important;
+    text-align: right;
 }
 
 #itc-page-header {
@@ -50,7 +51,7 @@ a:hover, #tm-page-header a:hover {
     float: right;
     font-weight: normal;
     padding-right: 5px;
-    padding-top: 3px;
+    padding-top: 2px;
 }
 
 .itc-help {
@@ -80,7 +81,11 @@ a:hover, #tm-page-header a:hover {
 }
 
 .itc-label-value {
+    display: block;
     font-size: small;
+    text-align: right;
+    padding: 4px;
+    color: #484;
 }
 
 .itc-label small {

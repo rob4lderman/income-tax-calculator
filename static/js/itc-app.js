@@ -34,16 +34,20 @@ angular.module( "ItcApp", [] )
             medicareWages: parseFloat($scope.inputMedicareWages),
             socialSecurityWages: parseFloat($scope.inputSsWages),
 
+            standardDeduction: TaxRates.deductions.single,
+            itemizedDeductions: parseFloat( $scope.inputItemizedDeductions ),
+
             totalTaxWithheld: parseFloat( $scope.inputIncomeTaxWithheld )
                                     + parseFloat( $scope.inputSsTaxWithheld )
                                     + parseFloat( $scope.inputMedicareTaxWithheld ),
 
-            totalDeduction: parseFloat( $scope.inputDeduction )
-                                    + TaxRates.deductions.personalexemption
 
         };
 
         retMe.agi = retMe.wages + retMe.interestIncome + retMe.dividendIncome;
+
+        retMe.totalDeduction = Math.max( retMe.standardDeduction, retMe.itemizedDeductions )
+                                    + TaxRates.deductions.personalexemption;
 
         retMe.taxableAgi = retMe.agi - retMe.totalDeduction;
 
@@ -114,7 +118,7 @@ angular.module( "ItcApp", [] )
      * Init and Export to scope
      */
     $scope.onFormSubmit = onFormSubmit;
-    $scope.inputDeduction = "6929.19";  // state tax + charity  // TaxRates.deductions.single;
+    $scope.inputItemizedDeductions = "6929.19";  // state tax + charity  // TaxRates.deductions.single;
 
     $scope.inputWages = "111379.38";
     $scope.inputSsWages = "118434.14";
@@ -1610,6 +1614,108 @@ angular.module( "ItcApp", [] )
 
 }])
 
+
+/**
+ * http://ghost.scriptwerx.io/angularjs-currency-formatted-input/
+ *
+ * (directive) -> $compile -> (template) -> linkFn -> (pass $scope to linkFn) -> resulting HTML
+ */
+.directive('itcCurrencyInput', [ "$filter", "Logger",
+                        function ($filter,   Logger) {
+
+    var logger = Logger.getLogger("itcCurrencyInput", {all: true} );
+    logger.info("alive!");
+
+    /**
+     * @param a currency value, eg. "$45,000.24", "45000", "45,000.24"
+     *
+     * @return the float value of the given currency value
+     */
+    var parseCurrencyInput = function(value) {
+        return value 
+                ? parseFloat(value.toString().replace(/[^0-9._-]/g, '')) || 0 
+                : 0;
+    };
+     
+    /**
+     * Link is called to link a $scope to the directive's $compile'd template
+     *
+     * @param ngModelCtrl - require'd controllers are passed in here
+     */
+    var link = function(scope, el, attrs, ngModelCtrl) {
+
+        logger.info("link: entry");
+
+        /**
+         * @param value the model value (technically the model value as it is represented in the view).
+         *
+         * @return formatted value
+         */
+        var formatter = function(value) {
+            logger.info("formatter: value=" + value
+                                + ", ngModelCtrl.$modelValue=" + ngModelCtrl.$modelValue
+                                + ", ngModelCtrl.$viewValue=" + ngModelCtrl.$viewValue );
+
+            var retMe = $filter('currency')(parseCurrencyInput(value),"$",2);
+
+            logger.info("formatter: retMe=" + retMe);
+            return retMe;
+        };
+
+        // $formatters is an array of formatting functions that act like a pipeline.  
+        // The model value goes in one end and comes out the other side, formatted.
+        // The returned value is set as the $viewValue
+        // $formatters are called when the real model value changes
+        // Once $formatters complete the $viewValue is updated.
+        // When the $viewValue is updated, the $parsers are called, which determine the $modelValue.
+        ngModelCtrl.$formatters.push(formatter);
+
+        // $parsers are called whenever the $viewValue changes.
+        // E.g. as a user types into an input field, the model value ($viewValue) changes, 
+        // and the $parsers are run.  The value returned by $parsers is set as the $modelValue.
+        ngModelCtrl.$parsers.push(function(viewValue) {
+            logger.info("parser: viewValue=" + viewValue 
+                                + ", ngModelCtrl.$modelValue=" + ngModelCtrl.$modelValue
+                                + ", ngModelCtrl.$viewValue=" + ngModelCtrl.$viewValue );
+
+            var retMe = parseCurrencyInput(viewValue);
+
+            logger.info("parser: retMe=" + retMe);
+            return retMe;
+        });
+
+        // render() is called when the real model changes (perhaps by another controller).
+        ngModelCtrl.$render = function() {
+            logger.info("$render: ngModelCtrl.$modelValue=" + ngModelCtrl.$modelValue
+                                + ", ngModelCtrl.$viewValue=" + ngModelCtrl.$viewValue );
+            el.val( ngModelCtrl.$viewValue );
+        };
+
+        // Update the view with the formatted value when the input is blurred.
+        el.bind('blur', function(event) {
+            logger.info("blur: el.val:" + el.val());
+            ngModelCtrl.$setViewValue( formatter(el.val()), event );
+            logger.info("blur: after calling formatter: el.val:" + el.val()
+                                + ", ngModelCtrl.$modelValue=" + ngModelCtrl.$modelValue
+                                + ", ngModelCtrl.$viewValue=" + ngModelCtrl.$viewValue );
+            // Neither line below triggers a re-render of the updated $viewValue ,
+            // so I just set the DOM element value myself.
+            // scope.$digest();
+            // ngModelCtrl.$commitViewValue();
+            el.val( ngModelCtrl.$viewValue );
+        });
+
+        logger.info("link: exit");
+    };
+
+    return {
+        // requires the ng-model directive
+        // the ^ means search thru the parents until you find the first ng-model directive
+        require: '^ngModel',
+
+        link: link
+    };
+}])
 
 
 
