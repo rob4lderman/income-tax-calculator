@@ -6,6 +6,7 @@ TODO: add buffer room at top of income (maybe 5%) when scaling the size of the i
       so small increments in income (e.g. dividend income) doesn't force an entire redraw of the canvas
 
 TODO: personal exemption ($4000 for 2015).  this is another deduction (can be used in addition to standard deduction/itemized deduction)
+      phaseout of exemption: https://www.irs.gov/publications/p17/ch03.html#en_US_2015_publink1000309843
 
 TODO: form 1040 - individual income tax return form
 
@@ -17,6 +18,8 @@ TODO: medicare and ss taxes apply to full income (401k deferrals do not apply) (
       w2 box 1 = w2 box 5 - w2 box 12 or 14
 
 TODO: additional medicare taxes for high earners: http://taxes.about.com/od/payroll/a/Medicare-Tax.htm
+
+TODO: window.localStorage - save form data
 
 
 

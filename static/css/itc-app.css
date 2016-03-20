@@ -1,4 +1,8 @@
 
+input {
+    background-color: #ffffd0 !important;
+    color: #48c !important;
+}
 
 #itc-page-header {
     height: 50px;
@@ -18,9 +22,6 @@ a:hover, #tm-page-header a:hover {
     color: #aaa;
 }
 
-em {
-    font-weight: bold;
-}
 
 #itc-canvas {
     margin-top: 15px;
@@ -54,8 +55,13 @@ em {
 
 .itc-help {
     font-size: smaller;
-    color: #888;
+    color: #c84;
     margin-top: 10px;
+}
+
+.itc-help em {
+    font-weight: bold;
+    color: #a86;
 }
 
 .itc-help hr {
@@ -70,6 +76,7 @@ em {
     width: 100%;
     font-weight: bold;
     font-size: small;
+    padding-left: 2px;
 }
 
 .itc-label-value {

@@ -28,12 +28,10 @@ angular.module( "ItcApp", [] )
     var processForm = function() {
 
         var retMe = {
-            agi: parseFloat( $scope.inputWages ) 
-                          + parseFloat( $scope.inputInterestIncome ) 
-                          + parseFloat( $scope.inputDividendIncome ),
-
+            wages: parseFloat( $scope.inputWages ), 
+            interestIncome: parseFloat( $scope.inputInterestIncome ), 
+            dividendIncome: parseFloat( $scope.inputDividendIncome ),
             medicareWages: parseFloat($scope.inputMedicareWages),
-
             socialSecurityWages: parseFloat($scope.inputSsWages),
 
             totalTaxWithheld: parseFloat( $scope.inputIncomeTaxWithheld )
@@ -45,18 +43,23 @@ angular.module( "ItcApp", [] )
 
         };
 
+        retMe.agi = retMe.wages + retMe.interestIncome + retMe.dividendIncome;
+
         retMe.taxableAgi = retMe.agi - retMe.totalDeduction;
 
-        retMe.totalIncome = retMe.medicareWages 
-                                    + parseFloat( $scope.inputInterestIncome ) 
-                                    + parseFloat( $scope.inputDividendIncome );
+        retMe.totalIncome = Math.max( retMe.medicareWages + retMe.interestIncome + retMe.dividendIncome,
+                                      retMe.agi );
 
         // compute taxes.
         retMe.incomeTax = _.reduce(TaxRates.getBrackets( retMe.taxableAgi ), 
                                    function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, retMe.taxableAgi ); }, 
                                    0 );
+
         retMe.socialSecurityTax = TaxRates.getTaxedAmount( TaxRates.socialsecurity.single, retMe.socialSecurityWages );
-        retMe.medicareTax = TaxRates.getTaxedAmount( TaxRates.medicare.single, retMe.medicareWages );
+
+        retMe.medicareTax = _.reduce(TaxRates.getMedicareBrackets( retMe.medicareWages ), 
+                                     function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, retMe.medicareWages ); }, 
+                                     0 );
 
         retMe.totalTax = retMe.incomeTax + retMe.socialSecurityTax + retMe.medicareTax;
 
@@ -96,15 +99,14 @@ angular.module( "ItcApp", [] )
 
         $scope.incomeData = incomeData;
 
-        // -rx- if (prevIncome != $scope.inputMedicareTaxWithheld ) {
-        if (prevIncome != incomeData.medicareWages ) {
+        if (prevIncome !=  incomeData.totalIncome ) {
             // redraw everything (need to re-scale since the total income changed)
             prevTaxableIncome = 0;
         }
 
         TheCanvas.refresh( incomeData, prevTaxableIncome );
 
-        prevIncome = incomeData.medicareWages ;
+        prevIncome = incomeData.totalIncome;
         prevTaxableIncome = incomeData.agi - incomeData.totalDeduction;
     };
 
@@ -684,13 +686,6 @@ angular.module( "ItcApp", [] )
      */
     var buildTotalTaxRateLabelAnimation = function(canvas, incomeData, ppdFn) {
 
-        // -rx- // compute total taxed amount and effective tax rate
-        // -rx- var totalTaxedAmount = _.reduce(brackets, 
-        // -rx-                                 function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, taxableIncome); }, 
-        // -rx-                                 0 );
-        // -rx- totalTaxedAmount += TaxRates.getTaxedAmount( TaxRates.socialsecurity.single, taxableIncome );
-        // -rx- totalTaxedAmount += TaxRates.getTaxedAmount( TaxRates.medicare.single, taxableIncome );
-
         var effectiveTaxRate =  Math.round( incomeData.totalTax / incomeData.totalIncome * 100 );
 
         logger.fine("buildTotalTaxRateLabelAnimation: effectiveTaxRate=" + effectiveTaxRate );
@@ -702,7 +697,7 @@ angular.module( "ItcApp", [] )
                         x: getTotalTaxBarX() + 5,
                         // y: ppdFn( Math.min(bracket.top,income) - (TaxRates.getBracketSize(bracket, income)/2) ) } ;
                         // y: ppdFn( Math.min(bracket.top,income) ) - 15 } ;
-                        y: ppdFn( incomeData.totalTax ) + (brackets.length + 2) + 5,  // account for extra pixels between brackets
+                        y: ppdFn( incomeData.totalTax ) + (brackets.length + 2) + 7,  // account for extra pixels between brackets
                         // topY: ppdFn( totalTaxedAmount ) + 20
                         canvas: canvas,
                         frame: frame1
@@ -943,23 +938,25 @@ angular.module( "ItcApp", [] )
      * @return an animate() call for the medicare bracket.
      *
      */
-    var buildMedicareTaxBarAnimation = function(canvas, income, ppdFn) {
+    var buildMedicareTaxBarAnimation = function(canvas, incomeData, ppdFn) {
 
-        var bracket = TaxRates.medicare.single;
+        var states = _.map( TaxRates.getMedicareBrackets(incomeData.medicareWages),
+                            function(bracket) {
+                                return { x: getMedicareTaxBarX(),
+                                         y: ppdFn( TaxRates.getBracketTop( bracket,incomeData.medicareWages) ) ,
+                                         w: barWidth,
+                                         h: 0,
+                                         endHeight: ppdFn( TaxRates.getTaxedAmount(bracket, incomeData.medicareWages) ),
+                                         fillStyle:  TaxRates.medicareFillStyle,
+                                         canvas: canvas,
+                                         frame: frame1
+                                       };
+                             } );
 
-        var state = { x: getMedicareTaxBarX(),
-                      y: ppdFn( TaxRates.getBracketTop( bracket,income) ) ,
-                      w: barWidth,
-                      h: 0,
-                      endHeight: ppdFn( TaxRates.getTaxedAmount(bracket, income) ),
-                      fillStyle:  TaxRates.medicareFillStyle,
-                      canvas: canvas,
-                      frame: frame1
-                    };
 
-        logger.fine("buildMedicareTaxBarAnimations: state=" + JSON.stringify(state));
+        logger.fine("buildMedicareTaxBarAnimations: states=" + JSON.stringify(states));
 
-        return _.partial(animate, barRenderFn, descBarIterateFn, state); 
+        return _.map( states, function(state) { return _.partial(animate, barRenderFn, descBarIterateFn, state); } );
     };
 
 
@@ -972,53 +969,55 @@ angular.module( "ItcApp", [] )
      */
     var buildTotalTaxMedicareTaxBarAnimation = function(canvas, incomeData, ppdFn) {
 
-        // -rx- // Configure initial state(s).
-        // -rx- var totalTaxedAmount = _.reduce(TaxRates.getBrackets(income),
-        // -rx-                                 function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, income); }, 
-        // -rx-                                 0 );
-        // -rx- totalTaxedAmount += TaxRates.getTaxedAmount( TaxRates.socialsecurity.single, income );
-        
         // Need to add 1 pixel per bracket to account for the pixel of space between
         // the bracket bars (and 1 pixel for the social security brakcet)
         var prevTopPixel = ppdFn( incomeData.incomeTax + incomeData.socialSecurityTax ) 
                             + TaxRates.getBrackets(incomeData.taxableAgi).length 
                             + 1;
 
-        var state = { x: getTotalTaxBarX(),
-                       y: prevTopPixel + 1,
-                       w: barWidth,
-                       h: 0,
-                       endHeight: ppdFn( incomeData.medicareTax ),
-                       fillStyle:  TaxRates.medicareFillStyle,
-                       canvas: canvas,
-                       frame: frame1
-                     };
+        var states = _.map( TaxRates.getMedicareBrackets(incomeData.medicareWages),
+                            function(bracket) {
+                                var endHeight = ppdFn( TaxRates.getTaxedAmount( bracket, incomeData.medicareWages ) );
+                                var retMe = { x: getTotalTaxBarX(),
+                                              y: prevTopPixel + 1,
+                                              w: barWidth,
+                                              h: 0,
+                                              endHeight: endHeight,
+                                              fillStyle:  TaxRates.medicareFillStyle,
+                                              canvas: canvas,
+                                              frame: frame1
+                                            };
+                                prevTopPixel = retMe.y + endHeight ;
+                                return retMe;
+                             } );
 
+        logger.fine("buildTotalTaxMedicareTaxBarAnimation: states=" + JSON.stringify(states));
 
-        logger.fine("buildMedicareTaxBarAnimations2: state=" + JSON.stringify(state));
-
-        return _.partial(animate, barRenderFn, barIterateFn, state); 
+        return _.map( states, function(state) { return _.partial(animate, barRenderFn, barIterateFn, state); } );
     };
 
 
     /**
      * @return an animate() call, for medicare
      */
-    var buildMedicareTaxRateLabelAnimation = function(canvas, income, ppdFn) {
+    var buildMedicareTaxRateLabelAnimation = function(canvas, incomeData, ppdFn) {
 
-        var bracket = TaxRates.medicare.single;
+        var states = _.map( TaxRates.getMedicareBrackets(incomeData.medicareWages),
+                            function(bracket) {
+                                var retMe = { label: getTaxedAmountLabel(bracket, incomeData.medicareWages),
+                                              topLabel: getBracketTopLabel(bracket, incomeData.medicareWages),
+                                              topTopLabel: "",          // Only the last bracket (top-most) will get the "Medicare" label
+                                              x: getMedicareTaxBarX(),
+                                              topY: ppdFn( TaxRates.getBracketTop( bracket,incomeData.medicareWages) ) + 7,
+                                              topTopY: ppdFn( TaxRates.getBracketTop( bracket,incomeData.medicareWages) ) + 20,
+                                              y: ppdFn( TaxRates.getBracketTop( bracket,incomeData.medicareWages) ) - ppdFn( TaxRates.getTaxedAmount(bracket, incomeData.medicareWages) ) - 15,
+                                              canvas: canvas,
+                                              frame: frame1
+                                            };
+                                return retMe;
+                             } );
 
-        // Configure state.
-        var state = { label: getTaxedAmountLabel(bracket, income),
-                      topLabel: getBracketTopLabel(bracket, income),
-                      topTopLabel: "Medicare",
-                      x: getMedicareTaxBarX(),
-                      topY: ppdFn( TaxRates.getBracketTop( bracket,income) ) + 7,
-                      topTopY: ppdFn( TaxRates.getBracketTop( bracket,income) ) + 20,
-                      y: ppdFn( TaxRates.getBracketTop( bracket,income) ) - ppdFn( TaxRates.getTaxedAmount(bracket, income) ) - 15,
-                      canvas: canvas,
-                      frame: frame1
-                    };
+        states[ states.length - 1].topTopLabel = "Medicare";
 
         var renderFn = function(state) {
             translate(state.canvas, state.frame);
@@ -1033,29 +1032,29 @@ angular.module( "ItcApp", [] )
             return false; 
         };
 
-        return _.partial(animate, renderFn, iterateFn, state);
+        return _.map( states, function(state) { return _.partial(animate, renderFn, iterateFn, state); } );
     };
 
     /**
      * @return an array of animate() calls, for the medicare tax brackets.
      */
-    var buildMedicareLineAnimation = function(canvas, income, ppdFn) {
+    var buildMedicareLineAnimation = function(canvas, incomeData, ppdFn) {
 
-        var bracket = TaxRates.medicare.single;
-
-        // Configure initial state.
-        var state = { x: getIncomeAxisLabelX(),
-                      y: ppdFn( TaxRates.getBracketTop( bracket,income) ) + 2,
-                      l: 0,
-                      endLength: getMedicareTaxLineLength(),
-                      fillStyle: TaxRates.medicareFillStyle,
-                      canvas: canvas,
-                      frame: frame1
-                    };
+        var states = _.map( TaxRates.getMedicareBrackets(incomeData.medicareWages),
+                            function(bracket) {
+                                return { x: getIncomeAxisLabelX(),
+                                         y: ppdFn( TaxRates.getBracketTop( bracket,incomeData.medicareWages ) ) + 2, // +2 to get above soc sec line
+                                         l: 0,
+                                         endLength: getMedicareTaxLineLength(),
+                                         fillStyle: TaxRates.medicareFillStyle,
+                                         canvas: canvas,
+                                         frame: frame1
+                                       };
+                             } );
                     
-        logger.fine("buildMedicareLineAnimation: state=" + JSON.stringify(state));
+        logger.fine("buildMedicareLineAnimation: states=" + JSON.stringify(states));
 
-        return _.partial( animate, lineRenderFn, lineIterateFn, state ); 
+        return _.map( states, function(state) { return _.partial( animate, lineRenderFn, lineIterateFn, state ); } );
     };
 
 
@@ -1130,12 +1129,6 @@ angular.module( "ItcApp", [] )
      */
     var buildTaxWithheldBarAnimations = function(canvas, incomeData, ppdFn) {
 
-        // -rx- var totalTaxedAmount = _.reduce(TaxRates.getBrackets(income), 
-        // -rx-                                 function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, income); }, 
-        // -rx-                                 0 );
-        // -rx- totalTaxedAmount += TaxRates.getTaxedAmount( TaxRates.socialsecurity.single, income );
-        // -rx- totalTaxedAmount += TaxRates.getTaxedAmount( TaxRates.medicare.single, income );
-
         if (incomeData.totalTax < incomeData.totalTaxWithheld) {
             // Refund!
             endHeight0 = ppdFn( incomeData.totalTax ) + TaxRates.getBrackets(incomeData.taxableAgi).length ;   // account for extra pixels between brackets, plus rounding diffs between totalTaxedAmount and individual brackets
@@ -1180,19 +1173,10 @@ angular.module( "ItcApp", [] )
      */
     var buildTaxWithheldLabelAnimation = function(canvas, incomeData, ppdFn) {
 
-        // -rx- // compute total taxed amount
-        // -rx- var totalTaxedAmount = _.reduce(TaxRates.getBrackets(income), 
-        // -rx-                                 function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, income); }, 
-        // -rx-                                 0 );
-        // -rx- totalTaxedAmount += TaxRates.getTaxedAmount( TaxRates.socialsecurity.single, income );
-        // -rx- totalTaxedAmount += TaxRates.getTaxedAmount( TaxRates.medicare.single, income );
-
         // Match text color with refund/bill
         var fillStyle = (incomeData.totalTax < incomeData.totalTaxWithheld ) ? fillStyleRefund : fillStyleBill;
         var taxDiff = Math.abs( incomeData.totalTax - incomeData.totalTaxWithheld );
         var label = (incomeData.totalTax < incomeData.totalTaxWithheld ) ? "Refund" : "Bill"; 
-
-        // -rx- logger.fine("buildTaxWithheldLabelAnimation: totalTaxedAmount=" + incomeData.totalTax );
 
         // Configure initial state(s).
         var state = {   label: label + ": " + $filter("currency")( taxDiff, "$", 0),
@@ -1281,18 +1265,12 @@ angular.module( "ItcApp", [] )
         logger.fine("refresh: incomeData=" + JSON.stringify(incomeData)
                               + ", prevTaxableIncome=" + prevTaxableIncome );
 
-
         // Create new canvas element and new canvas context, but don't
         // replace existing canvas element until the end of this function.
         theCanvasElement = createCanvasElement();
         var canvas = theCanvasElement.getContext("2d");
 
-        // set parm defaults
-        // -rx- var income = incomeData.agi || 100000;
-        // -rx- var withheld = incomeData.totalWithheld || 30000;
-        // -rx- var deduction = incomeData.totalDeduction || TaxRates.deductions.single;
-
-        // -rx- var taxableIncome = income - deduction;
+        // set the scale for the chart (pixels-per-dollar function).
         var ppdFn = Projector.ppd( getHeight() - 50, incomeData.totalIncome );    // pixel height of income bar
 
         // Initialize an empty promise.  It will be resolved immediately and will 
@@ -1372,7 +1350,7 @@ angular.module( "ItcApp", [] )
 
         // Kick off medicare sequence.
         var medicareSequence = runInParallel( afterMe,  
-                                              buildMedicareLineAnimation(canvas, incomeData.medicareWages, ppdFn) 
+                                              buildMedicareLineAnimation(canvas, incomeData, ppdFn) 
                                              );
 
 
@@ -1397,12 +1375,12 @@ angular.module( "ItcApp", [] )
                                );
 
         afterMe = runInParallel( medicareSequence,
-                                 buildMedicareTaxBarAnimation(canvas, incomeData.medicareWages, ppdFn), 
+                                 buildMedicareTaxBarAnimation(canvas, incomeData, ppdFn), 
                                  buildTotalTaxMedicareTaxBarAnimation(canvas, incomeData, ppdFn) 
                                );
 
         afterMe = runInSequence( afterMe, 
-                                 buildMedicareTaxRateLabelAnimation(canvas, incomeData.medicareWages, ppdFn) ,
+                                 buildMedicareTaxRateLabelAnimation(canvas, incomeData, ppdFn) ,
                                  buildTotalTaxRateLabelAnimation(canvas, incomeData, ppdFn) , 
                                  buildTaxWithheldBarAnimations(canvas, incomeData, ppdFn),
                                  buildTaxWithheldLabelAnimation(canvas, incomeData, ppdFn) 
@@ -1540,7 +1518,16 @@ angular.module( "ItcApp", [] )
     /**
      * Medicare rates
      */
-    var medicare = { single: { rate: 0.0145, rateLabel: "1.45%", bottom: 0, top: Number.MAX_VALUE } };
+    var medicareBrackets = { single: [ { rate: 0.0145, rateLabel: "1.45%", bottom: 0, top: 200000 } ,
+                                       { rate: 0.0235,  rateLabel: "2.35%", bottom: 200000, top: Number.MAX_VALUE } 
+                                     ],
+                             married: [ { rate: 0.0145, rateLabel: "1.45%", bottom: 0, top: 250000 } ,
+                                        { rate: 0.0235,  rateLabel: "2.35%", bottom: 250000, top: Number.MAX_VALUE } 
+                                     ],
+                             headofhousehold: [ { rate: 0.0145, rateLabel: "1.45%", bottom: 0, top: 200000 } ,
+                                                { rate: 0.0235,  rateLabel: "2.35%", bottom: 200000, top: Number.MAX_VALUE } 
+                                              ]
+                           };
 
     /**
      * Color palette for brackets, used when drawing the income bar.
@@ -1562,6 +1549,17 @@ angular.module( "ItcApp", [] )
         var retMe = _.filter( brackets.single, 
                          function(bracket) { return bracket.bottom < income ; } );
         logger.fine("getBrackets: income=" + income + ", brackets=" + JSON.stringify(retMe));
+        return retMe;
+    };
+
+    /**
+     * @return all medicare brackets applicable to the given income
+     */
+    var getMedicareBrackets = function(income) {
+
+        var retMe = _.filter( medicareBrackets.single, 
+                              function(bracket) { return bracket.bottom < income ; } );
+        logger.fine("getMedicareBrackets: income=" + income + ", brackets=" + JSON.stringify(retMe));
         return retMe;
     };
 
@@ -1599,10 +1597,11 @@ angular.module( "ItcApp", [] )
         deductions: deductions,
         socialsecurity: socialsecurity,
         socialsecurityFillStyle: "#88f",
-        medicare: medicare,
+        medicareBrackets: medicareBrackets,
         medicareFillStyle: "#f88",
         deductionFillStyle: "#eee",
         getBrackets: getBrackets,
+        getMedicareBrackets: getMedicareBrackets,
         bracketFillStyles: bracketFillStyles,
         getBracketTop: getBracketTop,
         getBracketSize: getBracketSize,

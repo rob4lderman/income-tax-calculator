@@ -27,7 +27,7 @@
                 <div class="row">
                     <div class="itc-container col-md-6" ng-init="showIncomeHelp=false">
                         <h5>Income
-                            <small class="itc-show-more"><a href="" ng-click="showIncomeHelp = !showIncomeHelp">[help]</a></small>
+                            <small class="itc-show-more"><a href="" ng-click="showIncomeHelp = !showIncomeHelp">[?]</a></small>
                         </h5>
                         <div ng-if="showIncomeHelp" class="itc-help">
                             <p>
@@ -46,7 +46,7 @@
 
                         <div class="form-group" ng-init="showWagesHelp=false">
                             <span class="itc-label">Wages
-                                <small class="itc-show-more"><a href="" ng-click="showWagesHelp = !showWagesHelp">[help]</a></small>
+                                <small class="itc-show-more"><a href="" ng-click="showWagesHelp = !showWagesHelp">[?]</a></small>
                             </span>
                             <div class="itc-help" ng-if="showWagesHelp">
                                 <p>
@@ -56,14 +56,13 @@
                                 <p>
                                     Tax-deferred contributions to a retirement account are typically listed in <em>W-2 box 12</em>.
                                 </p>
-                                <hr />
                             </div>
                             <input id="itc-input-wages" type="text" class="form-control input-sm" ng-model="inputWages" placeholder="Wages" />
                         </div>
 
                         <div class="form-group" ng-init="showSsWagesHelp=false">
                             <span class="itc-label">Social Security Wages
-                                <small class="itc-show-more"><a href="" ng-click="showSsWagesHelp = !showSsWagesHelp">[help]</a></small>
+                                <small class="itc-show-more"><a href="" ng-click="showSsWagesHelp = !showSsWagesHelp">[?]</a></small>
                             </span>
                             <div class="itc-help" ng-if="showSsWagesHelp">
                                 <p>
@@ -76,14 +75,13 @@
                                 <p>
                                     The income limit is referred to as the <em>benefit base</em>.  It's adjusted annually.
                                 </p>
-                                <hr />
                             </div>
                             <input id="itc-input-medicare-wages" type="text" class="form-control input-sm" ng-model="inputSsWages" placeholder="Social Security Wages" />
                         </div>
 
                         <div class="form-group" ng-init="showMedicareWagesHelp=false">
                             <span class="itc-label">Medicare Wages
-                                <small class="itc-show-more"><a href="" ng-click="showMedicareWagesHelp = !showMedicareWagesHelp">[help]</a></small>
+                                <small class="itc-show-more"><a href="" ng-click="showMedicareWagesHelp = !showMedicareWagesHelp">[?]</a></small>
                             </span>
                             <div class="itc-help" ng-if="showMedicareWagesHelp">
                                 <p>
@@ -93,28 +91,26 @@
                                 <p>
                                     This includes wages spent on tax-deferred contributions to a retirement account (e.g. a 401-K).
                                 </p>
-                                <hr />
                             </div>
                             <input id="itc-input-medicare-wages" type="text" class="form-control input-sm" ng-model="inputMedicareWages" placeholder="Medicare Wages" />
                         </div>
 
                         <div class="form-group" ng-init="showInterestIncomeHelp=false">
                             <span class="itc-label">Interest Income 
-                                <small class="itc-show-more"><a href="" ng-click="showInterestIncomeHelp = !showInterestIncomeHelp">[help]</a></small>
+                                <small class="itc-show-more"><a href="" ng-click="showInterestIncomeHelp = !showInterestIncomeHelp">[?]</a></small>
                             </span>
                             <div class="itc-help" ng-if="showInterestIncomeHelp">
                                 <p>
                                     <em>1099-INT: Interest income</em>, e.g. earned on a savings account.  Your financial institution
                                     should provide you with a 1099-INT form indicating the amount of interest earned.
                                 </p>
-                                <hr />
                             </div>
                             <input id="itc-input-interest-income" type="text" class="form-control input-sm" ng-model="inputInterestIncome" placeholder="Interest Income" />
                         </div>
 
                         <div class="form-group" ng-init="showDividendIncomeHelp=false">
                             <span class="itc-label">Ordinary Dividends
-                                <small class="itc-show-more"><a href="" ng-click="showDividendIncomeHelp = !showDividendIncomeHelp">[help]</a></small>
+                                <small class="itc-show-more"><a href="" ng-click="showDividendIncomeHelp = !showDividendIncomeHelp">[?]</a></small>
                             </span>
                             <div class="itc-help" ng-if="showDividendIncomeHelp">
                                 <p>
@@ -131,7 +127,6 @@
                                 <p>
                                     Learn more at <a href="https://www.irs.gov/publications/p550/ch01.html#en_US_2015_publink100010066">irs.gov</a>
                                 </p>
-                                <hr />
                             </div>
                             <input id="itc-input-dividend-income" type="text" class="form-control input-sm" ng-model="inputDividendIncome" placeholder="Ordinary Dividend Income" />
                         </div>
@@ -145,14 +140,13 @@
 
                         <div class="form-group" ng-init="showAgiHelp=false">
                             <span class="itc-label">Adjusted Gross Income
-                                <small class="itc-show-more"><a href="" ng-click="showAgiHelp = !showAgiHelp">[help]</a></small>
+                                <small class="itc-show-more"><a href="" ng-click="showAgiHelp = !showAgiHelp">[?]</a></small>
                             </span>
                             <div class="itc-help" ng-if="showAgiHelp">
                                 <p>
                                     <em>Adjusted Gross Income</em> is the sum of all income (including wages, interest, dividends, etc) after 
                                     deducting tax-deferred contributions to a retirement account (e.g. a 401-K).
                                 </p>
-                                <hr />
                             </div>
                             <span class="itc-label-value">{{ incomeData.agi | currency:'$':2 }} </span>
                         </div>
@@ -161,32 +155,31 @@
 
                     <div class="itc-container col-md-6" ng-init="showWithholdingsHelp=false">
                         <h5>Tax Withheld
-                            <small class="itc-show-more"><a href="" ng-click="showWithholdingsHelp = !showWithholdingsHelp">[help]</a></small>
+                            <small class="itc-show-more"><a href="" ng-click="showWithholdingsHelp = !showWithholdingsHelp">[?]</a></small>
                         </h5>
                         <div ng-if="showWithholdingsHelp" class="itc-help">
                             <p>
-                                TODO
+                                Income tax withheld by your employer.
                             </p>
                             <hr />
                         </div>
 
                         <div class="form-group" ng-init="showIncomeTaxWithheldHelp=false">
                             <span class="itc-label">Income Tax Withheld
-                                <small class="itc-show-more"><a href="" ng-click="showIncomeTaxWithheldHelp = !showIncomeTaxWithheldHelp">[help]</a></small>
+                                <small class="itc-show-more"><a href="" ng-click="showIncomeTaxWithheldHelp = !showIncomeTaxWithheldHelp">[?]</a></small>
                             </span>
                             <div class="itc-help" ng-if="showIncomeTaxWithheldHelp">
                                 <p>
                                     <em>W-2 box 2: Federal Income Tax Withheld</em> indicates the amount of wages
                                     that have been withheld by your employer for federal income taxes.
                                 </p>
-                                <hr />
                             </div>
                             <input id="itc-income-tax-withheld" type="text" class="form-control input-sm" ng-model="inputIncomeTaxWithheld" placeholder="W-2 box 2" />
                         </div>
 
                         <div class="form-group" ng-init="showSsTaxWithheldHelp=false">
-                            <span class="itc-label">Social Security Tax Withheld
-                                <small class="itc-show-more"><a href="" ng-click="showSsTaxWithheldHelp = !showSsTaxWithheldHelp">[help]</a></small>
+                            <span class="itc-label">Social Sec. Tax Withheld
+                                <small class="itc-show-more"><a href="" ng-click="showSsTaxWithheldHelp = !showSsTaxWithheldHelp">[?]</a></small>
                             </span>
                             <div class="itc-help" ng-if="showSsTaxWithheldHelp">
                                 <p>
@@ -201,14 +194,16 @@
                                     Social security and medicare taxes are also known as <em>payroll taxes</em>.  Your employer
                                     pays an equal amount in payroll taxes on your behalf.
                                 </p>
-                                <hr />
+                                <p>
+                                    Learn more at <a href="https://www.ssa.gov/oact/cola/cbb.html">ssa.gov</a>.
+                                </p>
                             </div>
                             <input id="itc-ss-tax-withheld" type="text" class="form-control input-sm" ng-model="inputSsTaxWithheld" placeholder="W-2 box 4" />
                         </div>
 
                         <div class="form-group" ng-init="showMedicareTaxWithheldHelp=false">
                             <span class="itc-label">Medicare Tax Withheld
-                                <small class="itc-show-more"><a href="" ng-click="showMedicareTaxWithheldHelp = !showMedicareTaxWithheldHelp">[help]</a></small>
+                                <small class="itc-show-more"><a href="" ng-click="showMedicareTaxWithheldHelp = !showMedicareTaxWithheldHelp">[?]</a></small>
                             </span>
                             <div class="itc-help" ng-if="showMedicareTaxWithheldHelp">
                                 <p>
@@ -222,7 +217,9 @@
                                     Social security and medicare taxes are also known as <em>payroll taxes</em>.  Your employer
                                     pays an equal amount in payroll taxes on your behalf.
                                 </p>
-                                <hr />
+                                <p>
+                                    Learn more at <a href="https://www.ssa.gov/oact/cola/cbb.html">ssa.gov</a>.
+                                </p>
                             </div>
                             <input id="itc-medicare-tax-withheld" type="text" class="form-control input-sm" ng-model="inputMedicareTaxWithheld" placeholder="W-2 box 6" />
                         </div>
@@ -233,24 +230,18 @@
                                 <span class="itc-label-value">{{ incomeData.totalTaxWithheld | currency:'$':2 }} </span>
                             </div>
                         </div>
-
                     </div>
                 </div> 
 
                 <div class="row">
                     <div class="itc-container col-md-6" ng-init="showDeductionsHelp=false">
-                        <h5>Deductions <small class="itc-show-more"><a href="" ng-click="showDeductionsHelp = !showDeductionsHelp">[help]</a></small></h5>
+                        <h5>Deductions 
+                            <small class="itc-show-more"><a href="" ng-click="showDeductionsHelp = !showDeductionsHelp">[?]</a></small>
+                        </h5>
                         <div ng-if="showDeductionsHelp" class="itc-help">
                             <p>
                                 <em>Deductions</em> are subtracted from your income and therefore reduce the amount
                                 of income that is taxed.  
-                            </p>
-                            <p>
-                                You can choose either the <em>standard deduction</em> or <em>itemized deductions</em>.  You can't do both.
-                                So if the total value of your itemized deductions does not exceed the standard deduction, don't bother itemizing.
-                            </p>
-                            <p>
-                                Learn more at <a href="https://www.irs.gov/Credits-&-Deductions/Individuals/Standard-Deduction">irs.gov</a>.
                             </p>
                             <hr />
                         </div>
@@ -258,15 +249,39 @@
                         <div class="form-group">
                             <div>
                                 <span class="itc-label">Personal Exemption</span>
+                                <small class="itc-show-more"><a href="" ng-click="showPersonalExemptionHelp = !showPersonalExemptionHelp">[?]</a></small>
+                            </div>
+                            <div ng-if="showPersonalExemptionHelp" class="itc-help">
+                                <p>
+                                    The <em>personal exemption</em> is deducted from your taxable income.  
+                                </p>
+                                <p>
+                                    In general you can claim one personal exemption each for yourself, your spouse, and any dependents.
+                                </p>
+                                <p>
+                                    Learn more at <a href="https://www.irs.gov/publications/p17/ch03.html#en_US_2015_publink1000309843">irs.gov</a>.
+                                </p>
                             </div>
                             <div>
                                 <span class="itc-label-value">{{ TaxRates.deductions.personalexemption | currency:'$':2 }} </span>
                             </div>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group" ng-init="showStandardDeductionHelp=false">
                             <div>
                                 <span class="itc-label">Standard Deduction</span>
+                                <small class="itc-show-more"><a href="" ng-click="showStandardDeductionHelp = !showStandardDeductionHelp">[?]</a></small>
+                            </div>
+                            <div ng-if="showStandardDeductionHelp" class="itc-help">
+                                <p>
+                                    You can choose either the <em>standard deduction</em> or <em>itemized deductions</em>.  You can't do both.
+                                </p>
+                                <p>
+                                    Choose whichever is larger, so as to reduce your taxable income as much as possible.
+                                </p>
+                                <p>
+                                    Learn more at <a href="https://www.irs.gov/Credits-&-Deductions/Individuals/Standard-Deduction">irs.gov</a>.
+                                </p>
                             </div>
                             <div>
                                 <span class="itc-label-value">{{ TaxRates.deductions.single | currency:'$':2 }} </span>
@@ -279,7 +294,7 @@
 
                         <div class="form-group" ng-init="showItemizedDeductionsHelp=false">
                             <span class="itc-label">Itemized Deductions 
-                                <small class="itc-show-more"><a href="" ng-click="showItemizedDeductionsHelp = !showItemizedDeductionsHelp">[help]</a></small>
+                                <small class="itc-show-more"><a href="" ng-click="showItemizedDeductionsHelp = !showItemizedDeductionsHelp">[?]</a></small>
                             </span>
                             <div class="itc-help" ng-if="showItemizedDeductionsHelp">
                                 <p>
@@ -295,7 +310,6 @@
                                 <p>
                                     Learn more at <a href="https://www.irs.gov/Credits-&-Deductions/Individuals#deductions">irs.gov</a>.
                                 </p>
-                                <hr />
                             </div>
                             <input id="itc-input-deduction" type="text" class="form-control input-sm" ng-model="inputDeduction" placeholder="Deduction" />
                         </div>
@@ -308,11 +322,18 @@
                                 <span class="itc-label-value">{{ incomeData.totalDeduction | currency:'$':2 }} </span>
                             </div>
                         </div>
+                        <div class="form-group">
+                            <span class="itc-label">Taxable AGI</span>
+                            <div>
+                                <span class="itc-label-value">{{ incomeData.taxableAgi | currency:'$':2 }} </span>
+                            </div>
+                        </div>
+
 
                     </div>
 
                     <div class="itc-container col-md-6" ng-init="showCreditsHelp=false">
-                        <h5>Tax Credits<small class="itc-show-more"><a href="" ng-click="showCreditsHelp= !showCreditsHelp">[help]</a></small></h5>
+                        <h5>Tax Credits<small class="itc-show-more"><a href="" ng-click="showCreditsHelp= !showCreditsHelp">[?]</a></small></h5>
                         <div ng-if="showCreditsHelp" class="itc-help">
                             <p>
                                 <em>Tax Credits</em> are subtracted from the amount of tax you owe. 
@@ -349,6 +370,8 @@
 
             <div class="itc-container">
                 <h5>Links</h5>
+                <a href="https://www.irs.gov/publications/p501/ar02.html#en_US_2015_publink1000220858">Tax Filing Info</a>
+                <br />
                 <a href="http://taxfoundation.org/article/2015-tax-brackets">2015 Income Tax Brackets</a>
                 <br />
                 <a href="https://www.ssa.gov/oact/cola/cbb.html">2015 FICA Tax Rates</a>
