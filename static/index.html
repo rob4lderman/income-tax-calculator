@@ -15,8 +15,11 @@
 <body>
     <div class="container-fluid" id="itc-page-header">
         <div class="container">
-            <div class="col-md-6">
-                Federal Income Tax Calculator
+            <div class="col-md-3">
+                <a href="/">TransparentTax.com</a>
+            </div>
+            <div class="col-md-9">
+                US Federal Income Tax Calculator <small>(for single filers only, at the moment)</small>
             </div>
         </div>
     </div>
@@ -51,8 +54,8 @@
                                 </span>
                                 <div class="itc-help" ng-if="showWagesHelp">
                                     <p>
-                                        <em>W-2 box 1: Wages, tips, other comp.</em> typically includes all income earned from
-                                        employment wages after deducting tax-deferred contributions to a retirement account (e.g. a 401-K).
+                                        <em>W-2 box 1: Wages, tips, other comp.</em> includes income earned from
+                                        employment wages, after deducting tax-deferred contributions to a retirement account (e.g. a 401-K).
                                     </p>
                                     <p>
                                         Tax-deferred contributions to a retirement account are typically listed in <em>W-2 box 12</em>.
@@ -68,13 +71,14 @@
                                 <div class="itc-help" ng-if="showSsWagesHelp">
                                     <p>
                                         <em>W-2 box 3: Social security wages and tips</em> typically includes all income earned from
-                                        employment wages, up to a maximum limit of {{ TaxRates.socialsecurity.single.top | currency:"$":0 }}.
+                                        employment wages, including wages spent on tax-deferred contributions to a retirement account (e.g. a 401-K).
                                     </p>
                                     <p>
-                                        This includes wages spent on tax-deferred contributions to a retirement account (e.g. a 401-K).
+                                        The maximum amount of wages subjected to social security tax is 
+                                        <em>{{ TaxRates.socialsecurity.single.top | currency:"$":0 }}</em>.
                                     </p>
                                     <p>
-                                        The income limit is referred to as the <em>benefit base</em>.  It's adjusted annually.
+                                        The wage limit is referred to as the <em>benefit base</em>.  It's adjusted annually.
                                     </p>
                                 </div>
                                 <input id="itc-input-medicare-wages" type="text" class="form-control input-sm itc-input" ng-model="inputSsWages" itc-currency-input placeholder="Social Security Wages" />
@@ -87,10 +91,7 @@
                                 <div class="itc-help" ng-if="showMedicareWagesHelp">
                                     <p>
                                         <em>W-2 box 5: Medicare wages and tips</em> typically includes all income earned from
-                                        employment wages.  
-                                    </p>
-                                    <p>
-                                        This includes wages spent on tax-deferred contributions to a retirement account (e.g. a 401-K).
+                                        employment wages, including wages spent on tax-deferred contributions to a retirement account (e.g. a 401-K).
                                     </p>
                                 </div>
                                 <input id="itc-input-medicare-wages" type="text" class="form-control input-sm itc-input" ng-model="inputMedicareWages" itc-currency-input placeholder="Medicare Wages" />
@@ -102,7 +103,7 @@
                                 </span>
                                 <div class="itc-help" ng-if="showInterestIncomeHelp">
                                     <p>
-                                        <em>1099-INT: Interest income</em>, e.g. earned on a savings account.  Your financial institution
+                                        <em>1099-INT: Interest income</em>, e.g. interest earned on a bank account.  Your financial institution
                                         should provide you with a 1099-INT form indicating the amount of interest earned.
                                     </p>
                                 </div>
@@ -133,8 +134,16 @@
                             </div>
 
                             <hr />
-                            <div class="form-group">
-                                <span class="itc-label">Total Income </span>
+                            <div class="form-group" ng-init="showTotalIncomeHelp=false">
+                                <span class="itc-label">Total Income 
+                                    <small class="itc-show-more"><a tabindex="-1" href="" ng-click="showTotalIncomeHelp = !showTotalIncomeHelp">[?]</a></small>
+                                </span>
+                                <div class="itc-help" ng-if="showTotalIncomeHelp">
+                                    <p>
+                                        Total income is the sum of all income (from wages, interest, dividends, etc),
+                                        including tax-deferred contributions to a retirement account (e.g. a 401-K).
+                                    </p>
+                                </div>
                                 <div>
                                     <span class="itc-label-value">{{ incomeData.totalIncome | currency:'$':2 }} </span>
                                 </div>
@@ -146,7 +155,7 @@
                                 </span>
                                 <div class="itc-help" ng-if="showAgiHelp">
                                     <p>
-                                        <em>Adjusted Gross Income</em> is the sum of all income (including wages, interest, dividends, etc) after 
+                                        <em>Adjusted Gross Income (AGI)</em> is the sum of all income (from wages, interest, dividends, etc) after 
                                         deducting tax-deferred contributions to a retirement account (e.g. a 401-K).
                                     </p>
                                 </div>
@@ -191,8 +200,8 @@
                                         that have been withheld by your employer for social security taxes.
                                     </p>
                                     <p>
-                                        Social security taxes are {{ TaxRates.socialsecurity.single.rateLabel }} of your earned wages
-                                        up to the <em>benefit base</em> of {{ TaxRates.socialsecurity.single.top | currency:"$":0 }}.
+                                        Social security taxes are <em>{{ TaxRates.socialsecurity.single.rateLabel }}</em> of wages
+                                        below the <em>benefit base</em> of <em>{{ TaxRates.socialsecurity.single.top | currency:"$":0 }}</em>.
                                     </p>
                                     <p>
                                         Social security and medicare taxes are also known as <em>payroll taxes</em>.  Your employer
@@ -215,7 +224,9 @@
                                         that have been withheld by your employer for medicare taxes.
                                     </p>
                                     <p>
-                                        Medicare taxes are {{ TaxRates.medicare.single.rateLabel }} of your earned wages.
+                                        Medicare taxes are <em>{{ TaxRates.medicareBrackets.single[0].rateLabel }}</em> of wages below 
+                                        <em>{{ TaxRates.medicareBrackets.single[0].top | currency:"$":0 }}</em> and <em>{{ TaxRates.medicareBrackets.single[1].rateLabel }} </em>
+                                        of wages above it.
                                     </p>
                                     <p>
                                         Social security and medicare taxes are also known as <em>payroll taxes</em>.  Your employer
@@ -228,14 +239,89 @@
                                 <input id="itc-medicare-tax-withheld" type="text" class="form-control input-sm itc-input" ng-model="inputMedicareTaxWithheld" itc-currency-input placeholder="W-2 box 6" />
                             </div>
 
-                            <hr />
-                            <div class="form-group">
-                                <span class="itc-label">Total Tax Withheld</span>
+                        </div>
+
+                        <div class="itc-container itc-tax-summary" >
+                            <h5>Tax Summary</h5>
+
+                            <div class="form-group" ng-init="showTaxableAGIHelp=false" >
+                                <span class="itc-label">Taxable AGI
+                                    <small class="itc-show-more">
+                                        <a tabindex="-1" href="" ng-click="showTaxableAGIHelp = !showTaxableAGIHelp">[?]</a>
+                                    </small>
+                                </span>
+                                <div class="itc-help" ng-if="showTaxableAGIHelp">
+                                    <p>
+                                        The amount of your <em>Adjusted Gross Income</em> that is taxable. It's
+                                        your <em>AGI</em> after subtracting all deductions.
+                                    </p>
+                                </div>
+                                <div>
+                                    <span class="itc-label-value">{{ incomeData.taxableAgi | currency:'$':2 }} </span>
+                                </div>
+                            </div>
+
+                            <div class="form-group" ng-init="showTaxDueHelp=false" >
+                                <span class="itc-label">Total Tax Due
+                                    <small class="itc-show-more">
+                                        <a tabindex="-1" href="" ng-click="showTaxDueHelp = !showTaxDueHelp">[?]</a>
+                                    </small>
+                                </span>
+                                <div class="itc-help" ng-if="showTaxDueHelp">
+                                    <p>
+                                        The amount of federal income tax you owe.
+                                    </p>
+                                </div>
+                                <div>
+                                    <span class="itc-label-value" ng-if="incomeData.totalTaxCredits >= 1">
+                                        (before credits) {{ incomeData.totalTaxBeforeCredits | currency:'$':2 }} 
+                                    </span>
+                                    <span class="itc-label-value">
+                                        <span ng-if="incomeData.totalTaxCredits >= 1">(after credits)</span>
+                                        {{ incomeData.totalTax | currency:'$':2 }} 
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="form-group" ng-init="showTotalTaxWithheldHelp=false" >
+                                <span class="itc-label">Total Tax Withheld
+                                    <small class="itc-show-more">
+                                        <a tabindex="-1" href="" ng-click="showTotalTaxWithheldHelp = !showTotalTaxWithheldHelp">[?]</a>
+                                    </small>
+                                </span>
+                                <div class="itc-help" ng-if="showTotalTaxWithheldHelp">
+                                    <p>
+                                        The sum total of tax withheld for income tax, social security tax, and medicare tax.
+                                    </p>
+                                </div>
                                 <div>
                                     <span class="itc-label-value">{{ incomeData.totalTaxWithheld | currency:'$':2 }} </span>
                                 </div>
                             </div>
+
+                            <div class="form-group" ng-init="showNetWithheldHelp=false" >
+                                <span class="itc-label">Net Tax Withheld
+                                    <small class="itc-show-more">
+                                        <a tabindex="-1" href="" ng-click="showNetWithheldHelp = !showNetWithheldHelp">[?]</a>
+                                    </small>
+                                </span>
+                                <div class="itc-help" ng-if="showNetWithheldHelp">
+                                    <p>
+                                        The difference between the amount of tax withheld and the amount of tax you owe.
+                                    </p>
+                                </div>
+                                <div>
+                                    <span class="itc-label-value itc-bold {{ (incomeData.netTaxWithheld >= 0) ? 'itc-label-value-refund' : 'itc-label-value-bill' }}">
+                                        {{ (incomeData.netTaxWithheld >= 0) ? "Refund!" : "Bill:" }} 
+                                        {{ incomeData.netTaxWithheld | currency:'$':2 }} 
+                                    </span>
+                                </div>
+                            </div>
+
+
                         </div>
+
+
                     </div>
                 </div> 
 
@@ -335,8 +421,8 @@
                                         <em>W-2 box 17: State income tax</em> indicates the amount of state tax you've paid.
                                     </p>
                                     <p>
-                                        <em>Note:</em> If you choose to deduct state income tax, and you end up getting a refund,
-                                        you have to claim the refund as income on your federal income taxes next year.
+                                        <em>Note:</em> If you choose to deduct state income tax, and you end up getting a refund
+                                        from the state, you'll have to claim the refund as income on your federal income taxes next year.
                                     </p>
                                 </div>
                                 <input id="itc-input-deduction-state-tax" type="text" class="form-control input-sm itc-input" ng-model="inputDeductionStateTax" itc-currency-input placeholder="State Tax" />
@@ -389,18 +475,26 @@
 
                             <hr />
 
-                            <div class="form-group">
+                            <div class="form-group" ng-init="showTotalDeductionHelp=false">
                                 <div>
-                                    <span class="itc-label">Total Deduction</span>
+                                    <span class="itc-label">Total Deduction
+                                        <small class="itc-show-more">
+                                            <a tabindex="-1" href="" ng-click="showTotalDeductionHelp = !showTotalDeductionHelp">[?]</a>
+                                        </small>
+                                    </span>
+                                </div>
+                                <div class="itc-help" ng-if="showTotalDeductionHelp">
+                                    <p>
+                                        The total amount in deductions you may claim.  It's equal to your 
+                                        <em>personal exemption</em> plus the larger of either the
+                                        <em>standard deduction</em> or your total <em>itemized deductions</em>.
+                                    </p>
+                                    <p>
+                                        The total amount of deductions cannot exceed your <em>AGI</em>.
+                                    </p>
                                 </div>
                                 <div>
                                     <span class="itc-label-value">{{ incomeData.totalDeduction | currency:'$':2 }} </span>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <span class="itc-label">Taxable AGI</span>
-                                <div>
-                                    <span class="itc-label-value">{{ incomeData.taxableAgi | currency:'$':2 }} </span>
                                 </div>
                             </div>
                         </div>
@@ -433,8 +527,21 @@
                             </div>
                             <div>
                                 <span class="itc-label">Credits</span>
-                                <input id="itc-input-credit" type="text" class="form-control input-sm itc-input" ng-model="inputTaxCredits" itc-currency-input placeholder="Tax Credit" />
+                                <input id="itc-input-credit" type="text" class="form-control input-sm itc-input" ng-model="inputTaxCredits" itc-currency-input placeholder="Tax Credit" autocomplete="off" />
                             </div>
+                        </div>
+
+                        <div class="itc-container itc-about">
+                            <h5>Links</h5>
+                            <p>
+                                <a href="https://www.irs.gov/publications/p501/ar02.html#en_US_2015_publink1000220858">Tax Filing Info</a>
+                                <br />
+                                <a href="http://taxfoundation.org/article/2015-tax-brackets">2015 Income Tax Brackets</a>
+                                <br />
+                                <a href="https://www.ssa.gov/oact/cola/cbb.html">2015 FICA Tax Rates</a>
+                                <br />
+                                <a href="https://www.irs.gov/Credits-&-Deductions">Tax Credits &amp; Deductions</a>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -444,16 +551,20 @@
                 <button type="submit" ng-show="false" >Refresh</button>
             </form>
 
-            <div class="itc-container">
-                <h5>Links</h5>
-                <a href="https://www.irs.gov/publications/p501/ar02.html#en_US_2015_publink1000220858">Tax Filing Info</a>
-                <br />
-                <a href="http://taxfoundation.org/article/2015-tax-brackets">2015 Income Tax Brackets</a>
-                <br />
-                <a href="https://www.ssa.gov/oact/cola/cbb.html">2015 FICA Tax Rates</a>
-                <br />
-                <a href="https://www.irs.gov/Credits-&-Deductions">Tax Credits &amp; Deductions</a>
+            <div class="itc-container itc-about">
+                <h5>About TransparentTax.com</h5>
+                <p>
+                    <a href="/">TransparentTax.com</a> is a prototype for a new online tax-filing service.  
+                </p>
+                <p>
+                    The site's mission is to educate people about how they are taxed, through the use of simple &amp; intuitive forms,
+                    clear charts, and nifty animations.
+                </p>
+                <p>
+                    Authored by <a href="http://www.longconnections.com/about-me/">@rob4lderman</a>
+                </p>
             </div>
+
 
         </div>
 
@@ -461,8 +572,9 @@
             <canvas id="itc-canvas" width="800" height="600"></canvas>
         </div>
 
-     </div>
-    <img id="itc-dot-img" src="images/dot.png" ng-show="false" />
+    </div>
+    <div class="container-fluid" id="itc-page-footer">
+    </div>
 
 
 </body>

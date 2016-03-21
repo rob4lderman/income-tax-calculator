@@ -14,6 +14,16 @@
     margin-bottom: 10px;
 }
 
+#itc-page-footer {
+    height: 50px;
+    line-height: 30px;
+    padding: 10px 0px;
+    font-size: 16px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+
 a:focus {
     text-decoration: none;
 }
@@ -49,6 +59,19 @@ a:hover, #tm-page-header a:hover {
     margin-top: 0px;
     background-color: #cff;
     padding: 4px;
+}
+
+.itc-tax-summary h5, .itc-about h5 { 
+    background-color: #fca;
+}
+
+.itc-tax-summary, .itc-about {
+    background-color: #eee;
+}
+
+.itc-about p {
+    font-size: small;
+    color: #888;
 }
 
 .itc-show-more {
@@ -88,8 +111,26 @@ a:hover, #tm-page-header a:hover {
     display: block;
     font-size: small;
     text-align: right;
-    padding: 4px;
+    padding: 4px 4px 0px 4px;
     color: #484;
+}
+
+.itc-bold {
+    font-weight: bold;
+}
+
+/**
+ * Keep consistent with fillStyleRefund.
+ */
+.itc-label-value-refund {
+    color: #4c4;
+}
+
+/**
+ * Keep consistent with fillStyleBill.
+ */
+.itc-label-value-bill {
+    color: #c44;
 }
 
 .itc-label small {

@@ -1,12 +1,12 @@
 angular.module( "ItcApp", [] )
 
 /**
- * TODO
+ * Controller for the input form.
  */
 .controller( "MainController", [ "$scope", "Logger", "TheCanvas", "Projector", "TaxRates",
                          function($scope,   Logger,   TheCanvas,   Projector,   TaxRates) {
 
-    var logger = Logger.getLogger("MainController", {all: true} );
+    var logger = Logger.getLogger("MainController", {all: false} );
     logger.info("alive!");
 
 
@@ -16,42 +16,45 @@ angular.module( "ItcApp", [] )
     var onFormSubmit = function() {
 
         refreshCanvas( processForm() );
+    };
 
+
+    /**
+     * TODO: much of this can be done using an angular directive on the input field to restrict input
+     *
+     * Sanity-check the incomeData.  Make sure nothing's out of whack.
+     *
+     * @return incomeData
+     */
+    var sanityCheck = function(incomeData) {
+
+        incomeData.wages = Math.max(0, incomeData.wages);
+        incomeData.interestIncome = Math.max(0, incomeData.interestIncome); 
+        incomeData.dividendIncome = Math.max(0, incomeData.dividendIncome);
+        incomeData.socialSecurityWages = Math.max(0, incomeData.socialSecurityWages);
+        incomeData.medicareWages = Math.max(0, incomeData.medicareWages);
+        incomeData.totalTaxWithheld = Math.max(0, incomeData.totalTaxWithheld);
+        incomeData.totalTaxCredits = Math.max(0, incomeData.totalTaxCredits);
+
+        return incomeData;
     };
 
     /**
-     * Process the form data and return a data object containing the relevant
-     * bits needed to render the canvas.
+     * @param incomeData as read from the form
      *
-     * @return data object
+     * @return incomeData with extra summary fields.
      */
-    var processForm = function() {
+    var summarize = function(incomeData) {
 
-        var incomeData = {
-            wages: parseFloat( $scope.inputWages ), 
-            interestIncome: parseFloat( $scope.inputInterestIncome ), 
-            dividendIncome: parseFloat( $scope.inputDividendIncome ),
-            medicareWages: parseFloat($scope.inputMedicareWages),
-            socialSecurityWages: parseFloat($scope.inputSsWages),
-
-            standardDeduction: TaxRates.deductions.single,
-            totalItemizedDeduction: parseFloat( $scope.inputDeductionStateTax )
-                                        + parseFloat( $scope.inputDeductionMortgageInterest )
-                                        + parseFloat( $scope.inputDeductionOther ),
-
-            totalTaxWithheld: parseFloat( $scope.inputIncomeTaxWithheld )
-                                    + parseFloat( $scope.inputSsTaxWithheld )
-                                    + parseFloat( $scope.inputMedicareTaxWithheld ),
-
-            totalTaxCredits: parseFloat( $scope.inputTaxCredits )
-
-
-        };
+        logger.fine("summarize: entry: incomeData=" + JSON.stringify(incomeData));
 
         incomeData.agi = incomeData.wages + incomeData.interestIncome + incomeData.dividendIncome;
 
         incomeData.totalDeduction = Math.max( incomeData.standardDeduction, incomeData.totalItemizedDeduction )
                                            + TaxRates.deductions.personalexemption;
+
+        // totalDeduction cannot be more than agi.
+        incomeData.totalDeduction = Math.min( incomeData.totalDeduction, incomeData.agi );
 
         incomeData.taxableAgi = incomeData.agi - incomeData.totalDeduction;
 
@@ -69,8 +72,29 @@ angular.module( "ItcApp", [] )
                                           function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, incomeData.medicareWages ); }, 
                                           0 );
 
+
         incomeData.totalTaxBeforeCredits =  incomeData.incomeTax + incomeData.socialSecurityTax + incomeData.medicareTax ;
+
+        // TODO: refundable vs non-refundable credits.
+        //       for now assume all non-refundable (i.e. tax credit can't exceed tax due).
+        incomeData.totalTaxCredits = Math.min( incomeData.totalTaxBeforeCredits, incomeData.totalTaxCredits );
+
         incomeData.totalTax = incomeData.totalTaxBeforeCredits - incomeData.totalTaxCredits;
+
+        incomeData.netTaxWithheld = incomeData.totalTaxWithheld - incomeData.totalTax;
+
+        logger.fine("summarize: exit: incomeData=" + JSON.stringify(incomeData));
+
+        return incomeData;
+    };
+
+    /**
+     * Process the form data and return a data object containing the relevant
+     * bits needed to render the canvas.
+     *
+     * @return data object
+     */
+    var processForm = function() {
 
         logger.fine("processForm: $scope=" + JSON.stringify( _.pick($scope, [ "inputWages",
                                                                               "inputSsWages",
@@ -78,8 +102,26 @@ angular.module( "ItcApp", [] )
                                                                               "inputIncomeTaxWithheld",
                                                                               "inputSsTaxWithheld",
                                                                               "inputMedicareTaxWithheld" ] ) ) );
-        // logger.fine("processForm: incomeData=" + JSON.stringify(incomeData) );
-        return incomeData;
+        var incomeData = {
+            wages: parseFloat( $scope.inputWages ), 
+            interestIncome: parseFloat( $scope.inputInterestIncome ), 
+            dividendIncome: parseFloat( $scope.inputDividendIncome ),
+            medicareWages: parseFloat($scope.inputMedicareWages),
+            socialSecurityWages: parseFloat($scope.inputSsWages),
+
+            standardDeduction: TaxRates.deductions.single,
+            totalItemizedDeduction: parseFloat( $scope.inputDeductionStateTax )
+                                        + parseFloat( $scope.inputDeductionMortgageInterest )
+                                        + parseFloat( $scope.inputDeductionOther ),
+
+            totalTaxWithheld: parseFloat( $scope.inputIncomeTaxWithheld )
+                                    + parseFloat( $scope.inputSsTaxWithheld )
+                                    + parseFloat( $scope.inputMedicareTaxWithheld ),
+
+            totalTaxCredits: parseFloat( $scope.inputTaxCredits )
+        };
+
+        return summarize( sanityCheck( incomeData ) );
     };
 
     /**
@@ -161,7 +203,7 @@ angular.module( "ItcApp", [] )
 .factory("Projector", [ "Logger", "_", 
                 function(Logger,   _) {
 
-    var logger = Logger.getLogger("Projector", {all: true} );
+    var logger = Logger.getLogger("Projector", {all: false} );
     logger.info("alive!");
 
     /**
@@ -190,7 +232,7 @@ angular.module( "ItcApp", [] )
                 function(Logger,   _,   $q,   TaxRates,    Projector,   $filter) {
 
 
-    var logger = Logger.getLogger("TheCanvas", {info: true} );
+    var logger = Logger.getLogger("TheCanvas", {info: false} );
     logger.info("alive!");
 
     /**
@@ -1249,15 +1291,15 @@ angular.module( "ItcApp", [] )
      */
     var buildTaxWithheldBarAnimations = function(canvas, incomeData, ppdFn) {
 
-        if (incomeData.totalTax < incomeData.totalTaxWithheld) {
+        if (incomeData.netTaxWithheld >= 0 ) {
             // Refund!
             endHeight0 = ppdFn( incomeData.totalTax ) + TaxRates.getBrackets(incomeData.taxableAgi).length ;   // account for extra pixels between brackets, plus rounding diffs between totalTaxedAmount and individual brackets
-            endHeight1 = ppdFn( incomeData.totalTaxWithheld - incomeData.totalTax );
+            endHeight1 = ppdFn( incomeData.netTaxWithheld );
             fillStyle1 = fillStyleRefund;
         } else {
             // bill
             endHeight0 = ppdFn( incomeData.totalTaxWithheld );
-            endHeight1 = ppdFn( incomeData.totalTax - incomeData.totalTaxWithheld ) + TaxRates.getBrackets(incomeData.taxableAgi).length ; // account for extra pixles betwen brackets
+            endHeight1 = ppdFn( -incomeData.netTaxWithheld ) + TaxRates.getBrackets(incomeData.taxableAgi).length ; // account for extra pixles betwen brackets
             fillStyle1 = fillStyleBill;
         }
 
@@ -1294,9 +1336,9 @@ angular.module( "ItcApp", [] )
     var buildTaxWithheldLabelAnimation = function(canvas, incomeData, ppdFn) {
 
         // Match text color with refund/bill
-        var fillStyle = (incomeData.totalTax < incomeData.totalTaxWithheld ) ? fillStyleRefund : fillStyleBill;
-        var taxDiff = Math.abs( incomeData.totalTax - incomeData.totalTaxWithheld );
-        var label = (incomeData.totalTax < incomeData.totalTaxWithheld ) ? "Refund" : "Bill"; 
+        var fillStyle = (incomeData.netTaxWithheld >= 0 ) ? fillStyleRefund : fillStyleBill;
+        var taxDiff = Math.abs( incomeData.netTaxWithheld );
+        var label = (incomeData.netTaxWithheld >= 0 ) ? "Refund" : "Bill"; 
 
         // Configure initial state(s).
         var state = {   label: label + ": " + $filter("currency")( taxDiff, "$", 0),

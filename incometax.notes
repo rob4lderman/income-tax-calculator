@@ -21,7 +21,16 @@ TODO: additional medicare taxes for high earners: http://taxes.about.com/od/payr
 
 TODO: window.localStorage - save form data
 
+TODO: new container below "tax withheld": 
+      Taxable AGI [?]
+      Total Tax (before credits) [?]
+      Total Tax (after credits) [?]
+      Net Withheld: green for refund! red for bill!
 
+TODO: domainname:
+      taxdemocracy.com
+      taxhuh.com
+      transparenttax.com <--  :)
 
 
 ==== init ====================================================================================================
