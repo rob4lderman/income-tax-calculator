@@ -34,11 +34,15 @@ a:hover, #tm-page-header a:hover {
     position: relative;
 }
 
+.itc-container-no-border {
+    padding: 0px;
+}
+
 .itc-container {
     border: solid 1px #ddd;
     padding: 6px;
     border-radius: 5px;
-    margin-top: 15px;
+    margin: 15px 3px 0px 3px;
 }
 
 .itc-container h5 {
@@ -104,5 +108,14 @@ a:hover, #tm-page-header a:hover {
     color: #888;
     font-size: small;
 }
+
+[itc-max-deduction=true] {
+    border: solid 2px #F2DEDE;
+}
+
+[itc-max-deduction=false] {
+    border: none;
+}
+
 
 

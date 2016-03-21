@@ -27,7 +27,7 @@ angular.module( "ItcApp", [] )
      */
     var processForm = function() {
 
-        var retMe = {
+        var incomeData = {
             wages: parseFloat( $scope.inputWages ), 
             interestIncome: parseFloat( $scope.inputInterestIncome ), 
             dividendIncome: parseFloat( $scope.inputDividendIncome ),
@@ -35,37 +35,42 @@ angular.module( "ItcApp", [] )
             socialSecurityWages: parseFloat($scope.inputSsWages),
 
             standardDeduction: TaxRates.deductions.single,
-            itemizedDeductions: parseFloat( $scope.inputItemizedDeductions ),
+            totalItemizedDeduction: parseFloat( $scope.inputDeductionStateTax )
+                                        + parseFloat( $scope.inputDeductionMortgageInterest )
+                                        + parseFloat( $scope.inputDeductionOther ),
 
             totalTaxWithheld: parseFloat( $scope.inputIncomeTaxWithheld )
                                     + parseFloat( $scope.inputSsTaxWithheld )
                                     + parseFloat( $scope.inputMedicareTaxWithheld ),
 
+            totalTaxCredits: parseFloat( $scope.inputTaxCredits )
+
 
         };
 
-        retMe.agi = retMe.wages + retMe.interestIncome + retMe.dividendIncome;
+        incomeData.agi = incomeData.wages + incomeData.interestIncome + incomeData.dividendIncome;
 
-        retMe.totalDeduction = Math.max( retMe.standardDeduction, retMe.itemizedDeductions )
-                                    + TaxRates.deductions.personalexemption;
+        incomeData.totalDeduction = Math.max( incomeData.standardDeduction, incomeData.totalItemizedDeduction )
+                                           + TaxRates.deductions.personalexemption;
 
-        retMe.taxableAgi = retMe.agi - retMe.totalDeduction;
+        incomeData.taxableAgi = incomeData.agi - incomeData.totalDeduction;
 
-        retMe.totalIncome = Math.max( retMe.medicareWages + retMe.interestIncome + retMe.dividendIncome,
-                                      retMe.agi );
+        incomeData.totalIncome = Math.max( incomeData.medicareWages + incomeData.interestIncome + incomeData.dividendIncome,
+                                           incomeData.agi );
 
         // compute taxes.
-        retMe.incomeTax = _.reduce(TaxRates.getBrackets( retMe.taxableAgi ), 
-                                   function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, retMe.taxableAgi ); }, 
-                                   0 );
+        incomeData.incomeTax = _.reduce(TaxRates.getBrackets( incomeData.taxableAgi ), 
+                                        function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, incomeData.taxableAgi ); }, 
+                                        0 );
 
-        retMe.socialSecurityTax = TaxRates.getTaxedAmount( TaxRates.socialsecurity.single, retMe.socialSecurityWages );
+        incomeData.socialSecurityTax = TaxRates.getTaxedAmount( TaxRates.socialsecurity.single, incomeData.socialSecurityWages );
 
-        retMe.medicareTax = _.reduce(TaxRates.getMedicareBrackets( retMe.medicareWages ), 
-                                     function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, retMe.medicareWages ); }, 
-                                     0 );
+        incomeData.medicareTax = _.reduce(TaxRates.getMedicareBrackets( incomeData.medicareWages ), 
+                                          function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, incomeData.medicareWages ); }, 
+                                          0 );
 
-        retMe.totalTax = retMe.incomeTax + retMe.socialSecurityTax + retMe.medicareTax;
+        incomeData.totalTaxBeforeCredits =  incomeData.incomeTax + incomeData.socialSecurityTax + incomeData.medicareTax ;
+        incomeData.totalTax = incomeData.totalTaxBeforeCredits - incomeData.totalTaxCredits;
 
         logger.fine("processForm: $scope=" + JSON.stringify( _.pick($scope, [ "inputWages",
                                                                               "inputSsWages",
@@ -73,8 +78,8 @@ angular.module( "ItcApp", [] )
                                                                               "inputIncomeTaxWithheld",
                                                                               "inputSsTaxWithheld",
                                                                               "inputMedicareTaxWithheld" ] ) ) );
-        // logger.fine("processForm: retMe=" + JSON.stringify(retMe) );
-        return retMe;
+        // logger.fine("processForm: incomeData=" + JSON.stringify(incomeData) );
+        return incomeData;
     };
 
     /**
@@ -118,7 +123,10 @@ angular.module( "ItcApp", [] )
      * Init and Export to scope
      */
     $scope.onFormSubmit = onFormSubmit;
-    $scope.inputItemizedDeductions = "6929.19";  // state tax + charity  // TaxRates.deductions.single;
+    $scope.inputDeductionStateTax = "6729.19";  // state tax + charity  // TaxRates.deductions.single;
+    $scope.inputDeductionOther = "200.00";  // state tax + charity  // TaxRates.deductions.single;
+    $scope.inputDeductionMortgageInterest = "0";
+    $scope.inputTaxCredits = "11000";
 
     $scope.inputWages = "111379.38";
     $scope.inputSsWages = "118434.14";
@@ -202,6 +210,29 @@ angular.module( "ItcApp", [] )
     var barWidth = 100;
 
     /**
+     * @return the mouse coords, relative to top-left corner of the canvas.
+     */
+    var getMouseCoords = function(e) {
+        return { x: e.clientX - e.currentTarget.offsetLeft,
+                 y: e.clientY - e.currentTarget.offsetTop };
+    };
+
+    /**
+     * Translate the mouse coords according to the given frame.
+     */
+    var translateCoords = function(coord, frame) {
+        return { x: coord.x - frame.x,
+                 y: coord.y - frame.y };
+    };
+
+    /**
+     * TODO
+     */
+    var onMouseMove = function(e) {
+        logger.fine("onMouseMove: mouse coords=" + JSON.stringify( translateCoords( getMouseCoords(e), frame1 ) ) );
+    }
+
+    /**
      * Create a new canvas element 
      *
      * The purpose of creating a brand new canvas element for each refresh()
@@ -218,6 +249,9 @@ angular.module( "ItcApp", [] )
         newCanvasElement.setAttribute("width","800");
         newCanvasElement.setAttribute("height","600");
 
+        // TODO:
+        newCanvasElement.addEventListener("mousemove", onMouseMove );
+
         return newCanvasElement;
     };
 
@@ -227,6 +261,8 @@ angular.module( "ItcApp", [] )
     var replaceCanvasElement = function( newCanvasElement ) {
         var oldCanvasElement = document.getElementById("itc-canvas");
         document.getElementById("itc-canvas-parent").replaceChild( newCanvasElement, oldCanvasElement );
+
+        oldCanvasElement.removeEventListener("mousemove", onMouseMove);
     };
 
     /**
@@ -365,6 +401,28 @@ angular.module( "ItcApp", [] )
                                state.w,
                                -1 * state.h );
     };
+
+    /**
+     * Render function used by income bar and tax bar animations.
+     * Draws a striped bar (rectangle) from the given state,
+     * from state.x,-y for state.w,-h
+     *
+     * @param state 
+     */
+    var stripedBarRenderFn = function(state) {
+        translate(state.canvas, state.frame);
+
+        state.canvas.beginPath();
+        state.canvas.strokeStyle = state.fillStyle;
+        state.canvas.lineWidth = 0.5;
+
+        for (var h = state.h;  h >= 0 ; h -= 3) {
+            drawLine( state.canvas,
+                      { x: state.x,            y: -(state.y + h) },
+                      { x: state.x + state.w,  y: -(state.y + h) } );
+        }
+    };
+
 
     /**
      * Iterate function used by income bar and tax bar animations.
@@ -701,7 +759,7 @@ angular.module( "ItcApp", [] )
                         x: getTotalTaxBarX() + 5,
                         // y: ppdFn( Math.min(bracket.top,income) - (TaxRates.getBracketSize(bracket, income)/2) ) } ;
                         // y: ppdFn( Math.min(bracket.top,income) ) - 15 } ;
-                        y: ppdFn( incomeData.totalTax ) + (brackets.length + 2) + 7,  // account for extra pixels between brackets
+                        y: ppdFn( incomeData.totalTaxBeforeCredits ) + (brackets.length + 2) + 7,  // account for extra pixels between brackets
                         // topY: ppdFn( totalTaxedAmount ) + 20
                         canvas: canvas,
                         frame: frame1
@@ -1098,6 +1156,64 @@ angular.module( "ItcApp", [] )
     };
 
     /**
+     * @return an animate() call for tax credits
+     *
+     */
+    var buildTaxCreditsBarAnimation = function(canvas, incomeData, ppdFn) {
+
+        if (incomeData.totalTaxCredits < 1) {
+            return _.partial( $q, function(resolve, reject) { resolve(1); } );
+        }
+
+        var totalTaxTopPixel = ppdFn( incomeData.totalTaxBeforeCredits )
+                                    + TaxRates.getBrackets(incomeData.agi).length
+                                    + 1
+                                    + TaxRates.getMedicareBrackets(incomeData.medicareWages).length;
+
+        var state = { x: getTotalTaxBarX(),
+                      y: totalTaxTopPixel,
+                      w: barWidth,
+                      h: 0,
+                      endHeight: ppdFn( incomeData.totalTaxCredits ),
+                      fillStyle: "#cfc", // "rgba(255, 255, 255, 0.2)",  // "#ddd",
+                      canvas: canvas,
+                      frame: frame1
+                    };
+
+        logger.info("buildTaxCreditsBarAnimation: state=" + JSON.stringify(state));
+
+        return _.partial(animate, stripedBarRenderFn, descBarIterateFn, state); 
+    };
+
+    /**
+     * @return an array of animate() calls, for the tax credits line
+     */
+    var buildTaxCreditsLineAnimation = function(canvas, incomeData, ppdFn) {
+
+        if (incomeData.totalTaxCredits < 1) {
+            return _.partial( $q, function(resolve, reject) { resolve(1); } );
+        }
+
+        var totalTaxTopPixel = ppdFn( incomeData.totalTax )
+                                    + TaxRates.getBrackets(incomeData.agi).length
+                                    + 1 ;
+
+        var state = { x: getTotalTaxBarX() - 10,
+                      y: totalTaxTopPixel,
+                      l: 0,
+                      endLength: barWidth + 30,
+                      fillStyle: "#8f8",
+                      canvas: canvas,
+                      frame: frame1
+                    };
+                    
+        logger.info("buildTaxCreditsLineAnimation: state=" + JSON.stringify(state) );
+
+        return _.partial( animate, lineRenderFn, lineIterateFn, state );
+    };
+
+
+    /**
      * @return an array of animate() calls, for each of the tax brackets.
      */
     var buildTaxBarAnimations = function(canvas, income, ppdFn, prevIncome) {
@@ -1384,7 +1500,15 @@ angular.module( "ItcApp", [] )
                                );
 
         afterMe = runInSequence( afterMe, 
-                                 buildMedicareTaxRateLabelAnimation(canvas, incomeData, ppdFn) ,
+                                 buildMedicareTaxRateLabelAnimation(canvas, incomeData, ppdFn) 
+                               );
+
+        afterMe = runInParallel( afterMe,
+                                 buildTaxCreditsBarAnimation(canvas, incomeData, ppdFn), 
+                                 buildTaxCreditsLineAnimation(canvas, incomeData, ppdFn)
+                               );
+
+        afterMe = runInSequence( afterMe, 
                                  buildTotalTaxRateLabelAnimation(canvas, incomeData, ppdFn) , 
                                  buildTaxWithheldBarAnimations(canvas, incomeData, ppdFn),
                                  buildTaxWithheldLabelAnimation(canvas, incomeData, ppdFn) 
@@ -1623,7 +1747,7 @@ angular.module( "ItcApp", [] )
 .directive('itcCurrencyInput', [ "$filter", "Logger",
                         function ($filter,   Logger) {
 
-    var logger = Logger.getLogger("itcCurrencyInput", {all: true} );
+    var logger = Logger.getLogger("itcCurrencyInput", {all: false} );
     logger.info("alive!");
 
     /**
@@ -1657,6 +1781,7 @@ angular.module( "ItcApp", [] )
                                 + ", ngModelCtrl.$viewValue=" + ngModelCtrl.$viewValue );
 
             var retMe = $filter('currency')(parseCurrencyInput(value),"$",2);
+            // ngModelCtrl.$setViewValue( retMe );
 
             logger.info("formatter: retMe=" + retMe);
             return retMe;
