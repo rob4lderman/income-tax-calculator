@@ -352,16 +352,23 @@
                                         In general you can claim one personal exemption each for yourself, your spouse, and any dependents.
                                     </p>
                                     <p>
+                                        The personal exemption for 2015 is {{ TaxRates.personalExemption.deduction | currency:'$':2 }}. 
+                                        It's adjusted annually.  
+                                    </p>
+                                    <p>
+                                        The personal exemption "phases out" for higher incomes.
+                                    </p>
+                                    <p>
                                         Learn more at <a href="https://www.irs.gov/publications/p17/ch03.html#en_US_2015_publink1000309843">irs.gov</a>.
                                     </p>
                                 </div>
                                 <div>
-                                    <span class="itc-label-value">{{ TaxRates.deductions.personalexemption | currency:'$':2 }} </span>
+                                    <span class="itc-label-value">{{ getPersonalExemption() | currency:'$':2 }} </span> 
                                 </div>
                             </div>
                             <hr />
 
-                            <div class="form-group" itc-max-deduction="{{TaxRates.deductions.single >= incomeData.totalItemizedDeduction}}" ng-init="showStandardDeductionHelp=false">
+                            <div class="form-group" itc-max-deduction="{{TaxRates.standardDeduction.single >= incomeData.totalItemizedDeduction}}" ng-init="showStandardDeductionHelp=false">
                                 <div>
                                     <span class="itc-label">Standard Deduction</span>
                                     <small class="itc-show-more"><a tabindex="-1" href="" ng-click="showStandardDeductionHelp = !showStandardDeductionHelp">[?]</a></small>
@@ -378,7 +385,7 @@
                                     </p>
                                 </div>
                                 <div>
-                                    <span class="itc-label-value">{{ TaxRates.deductions.single | currency:'$':2 }} </span>
+                                    <span class="itc-label-value">{{ TaxRates.standardDeduction.single | currency:'$':2 }} </span>
                                 </div>
                             </div>
 
@@ -464,7 +471,7 @@
                                 <input id="itc-input-deduction-other" type="text" class="form-control input-sm itc-input" ng-model="inputDeductionOther" itc-currency-input placeholder="Mortgage Interest" />
                             </div>
 
-                            <div class="form-group" itc-max-deduction="{{incomeData.totalItemizedDeduction > TaxRates.deductions.single}}" >
+                            <div class="form-group" itc-max-deduction="{{incomeData.totalItemizedDeduction > TaxRates.standardDeduction.single}}" >
                                 <div>
                                     <span class="itc-label">Total Itemized Deductions</span>
                                 </div>

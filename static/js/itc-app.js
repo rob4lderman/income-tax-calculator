@@ -51,7 +51,7 @@ angular.module( "ItcApp", [] )
         incomeData.agi = incomeData.wages + incomeData.interestIncome + incomeData.dividendIncome;
 
         incomeData.totalDeduction = Math.max( incomeData.standardDeduction, incomeData.totalItemizedDeduction )
-                                           + TaxRates.deductions.personalexemption;
+                                           + TaxRates.getPersonalExemption( incomeData.agi, TaxRates.personalExemption.phaseoutThreshold.single ); 
 
         // totalDeduction cannot be more than agi.
         incomeData.totalDeduction = Math.min( incomeData.totalDeduction, incomeData.agi );
@@ -109,7 +109,7 @@ angular.module( "ItcApp", [] )
             medicareWages: parseFloat($scope.inputMedicareWages),
             socialSecurityWages: parseFloat($scope.inputSsWages),
 
-            standardDeduction: TaxRates.deductions.single,
+            standardDeduction: TaxRates.standardDeduction.single,
             totalItemizedDeduction: parseFloat( $scope.inputDeductionStateTax )
                                         + parseFloat( $scope.inputDeductionMortgageInterest )
                                         + parseFloat( $scope.inputDeductionOther ),
@@ -122,6 +122,13 @@ angular.module( "ItcApp", [] )
         };
 
         return summarize( sanityCheck( incomeData ) );
+    };
+
+    /**
+     * @return the personal exemption for the user's agi.
+     */
+    var getPersonalExemption = function() {
+        return TaxRates.getPersonalExemption( $scope.incomeData.agi, TaxRates.personalExemption.phaseoutThreshold.single );
     };
 
     /**
@@ -140,7 +147,7 @@ angular.module( "ItcApp", [] )
     var prevIncome = 0;
 
     /**
-     *
+     * Note: sets $scope.incomeData.
      */
     var refreshCanvas = function( incomeData ) {
 
@@ -165,10 +172,11 @@ angular.module( "ItcApp", [] )
      * Init and Export to scope
      */
     $scope.onFormSubmit = onFormSubmit;
-    $scope.inputDeductionStateTax = "6729.19";  // state tax + charity  // TaxRates.deductions.single;
-    $scope.inputDeductionOther = "200.00";  // state tax + charity  // TaxRates.deductions.single;
+    $scope.getPersonalExemption = getPersonalExemption;
+    $scope.inputDeductionStateTax = "6729.19";  // state tax + charity  
+    $scope.inputDeductionOther = "200.00";  // state tax + charity  
     $scope.inputDeductionMortgageInterest = "0";
-    $scope.inputTaxCredits = "11000";
+    $scope.inputTaxCredits = "3000";
 
     $scope.inputWages = "111379.38";
     $scope.inputSsWages = "118434.14";
@@ -1594,7 +1602,8 @@ angular.module( "ItcApp", [] )
 /**
  * Logger
  */
-.factory("Logger", [ function() {
+.factory("Logger", [ "_",
+           function(  _ ) {
 
     var name = "RootLogger";
 
@@ -1674,11 +1683,41 @@ angular.module( "ItcApp", [] )
     /**
      * Standard deductions
      */
-    var deductions = { single: 6300,
-                       married: 12600,
-                       headofhousehold: 9250,
-                       personalexemption: 4000
-                     };
+    var standardDeduction = { single: 6300,
+                              married: 12600,
+                              headofhousehold: 9250
+                            };
+
+    /**
+     * Personal exemption and phase-outs.
+     * http://www.taxpolicycenter.org/press/press-resources-pep.cfm
+     */
+    var personalExemption = { deduction: 4000,
+                              phaseoutThreshold: { single: 258250,
+                                                   headOfHousehold: 284050,
+                                                   marriedJoint: 309900,
+                                                   marriedSeparate: 154950 
+                                                 } 
+                            };
+
+    /**
+     * @return the personal exemption for the given agi and phaseout threshold.
+     * http://www.taxpolicycenter.org/press/press-resources-pep.cfm
+     */
+    var getPersonalExemption = function(agi, phaseoutThreshold) {
+
+        var amountOverThreshold = agi - phaseoutThreshold;
+        if ( amountOverThreshold <= 0) {
+            return personalExemption.deduction;
+        } else {
+            var num2500Blocks = Math.ceil(amountOverThreshold / 2500.0);
+
+            // TODO: if claiming more than 1 personal exemption than the reduction rate applies to the total exemption (e.g. $12000 for 3 people)
+            var personalExemptionReduction = personalExemption.deduction * 0.02 * num2500Blocks;
+
+            return Math.max( personalExemption.deduction - personalExemptionReduction, 0);
+        }
+    };
 
     /**
      * Social security (OASDI) rates and limits
@@ -1764,7 +1803,8 @@ angular.module( "ItcApp", [] )
      */
     return {
         brackets: brackets,
-        deductions: deductions,
+        standardDeduction: standardDeduction,
+        personalExemption: personalExemption,
         socialsecurity: socialsecurity,
         socialsecurityFillStyle: "#88f",
         medicareBrackets: medicareBrackets,
@@ -1775,7 +1815,8 @@ angular.module( "ItcApp", [] )
         bracketFillStyles: bracketFillStyles,
         getBracketTop: getBracketTop,
         getBracketSize: getBracketSize,
-        getTaxedAmount: getTaxedAmount
+        getTaxedAmount: getTaxedAmount,
+        getPersonalExemption: getPersonalExemption
     };
 
 }])
