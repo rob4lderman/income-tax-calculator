@@ -5,32 +5,15 @@
 TODO: add buffer room at top of income (maybe 5%) when scaling the size of the income bar 
       so small increments in income (e.g. dividend income) doesn't force an entire redraw of the canvas
 
-TODO: personal exemption ($4000 for 2015).  this is another deduction (can be used in addition to standard deduction/itemized deduction)
-      phaseout of exemption: https://www.irs.gov/publications/p17/ch03.html#en_US_2015_publink1000309843
+TODO: enable other filing statuses (married, headofhousehold, etc)
+      this will require making updates to some calcs, e.g. personal exemption phaseout.
+
+TODO: additional medicare taxes for high earners: http://taxes.about.com/od/payroll/a/Medicare-Tax.htm
+      not sure i have everything covered, specifically the 3.8% tax on "net investment income"
 
 TODO: form 1040 - individual income tax return form
 
-TODO: canvas drawing from prev form continues after form refresh
-      need to cancel them all or replace the canvas element or something.
 
-TODO: medicare and ss taxes apply to full income (401k deferrals do not apply) (w2 box 5)
-      federal income tax applies to income - 401k deferrals (w2 box 1)
-      w2 box 1 = w2 box 5 - w2 box 12 or 14
-
-TODO: additional medicare taxes for high earners: http://taxes.about.com/od/payroll/a/Medicare-Tax.htm
-
-TODO: window.localStorage - save form data
-
-TODO: new container below "tax withheld": 
-      Taxable AGI [?]
-      Total Tax (before credits) [?]
-      Total Tax (after credits) [?]
-      Net Withheld: green for refund! red for bill!
-
-TODO: domainname:
-      taxdemocracy.com
-      taxhuh.com
-      transparenttax.com <--  :)
 
 
 ==== init ====================================================================================================

@@ -3,8 +3,8 @@ angular.module( "ItcApp", [] )
 /**
  * Controller for the input form.
  */
-.controller( "MainController", [ "$scope", "Logger", "TheCanvas", "Projector", "TaxRates",
-                         function($scope,   Logger,   TheCanvas,   Projector,   TaxRates) {
+.controller( "MainController", [ "$scope", "Logger", "TheCanvas", "Projector", "TaxRates", "LocalStorage",
+                         function($scope,   Logger,   TheCanvas,   Projector,   TaxRates,   LocalStorage) {
 
     var logger = Logger.getLogger("MainController", {all: false} );
     logger.info("alive!");
@@ -15,7 +15,10 @@ angular.module( "ItcApp", [] )
      */
     var onFormSubmit = function() {
 
-        refreshCanvas( processForm() );
+        $scope.incomeData = processForm();
+        LocalStorage.setLocalStorage( $scope.incomeData );
+
+        refreshCanvas( $scope.incomeData );
     };
 
 
@@ -33,7 +36,15 @@ angular.module( "ItcApp", [] )
         incomeData.dividendIncome = Math.max(0, incomeData.dividendIncome);
         incomeData.socialSecurityWages = Math.max(0, incomeData.socialSecurityWages);
         incomeData.medicareWages = Math.max(0, incomeData.medicareWages);
-        incomeData.totalTaxWithheld = Math.max(0, incomeData.totalTaxWithheld);
+        
+        incomeData.taxWithheld.income = Math.max(0, incomeData.taxWithheld.income);
+        incomeData.taxWithheld.socialSecurity = Math.max(0, incomeData.taxWithheld.socialSecurity);
+        incomeData.taxWithheld.medicare = Math.max(0, incomeData.taxWithheld.medicare);
+        
+        incomeData.itemizedDeductions.stateTax = Math.max(0, incomeData.itemizedDeductions.stateTax);
+        incomeData.itemizedDeductions.mortgageInterest = Math.max(0, incomeData.itemizedDeductions.mortgageInterest);
+        incomeData.itemizedDeductions.other = Math.max(0, incomeData.itemizedDeductions.other);
+
         incomeData.totalTaxCredits = Math.max(0, incomeData.totalTaxCredits);
 
         return incomeData;
@@ -49,6 +60,10 @@ angular.module( "ItcApp", [] )
         logger.fine("summarize: entry: incomeData=" + JSON.stringify(incomeData));
 
         incomeData.agi = incomeData.wages + incomeData.interestIncome + incomeData.dividendIncome;
+
+        incomeData.totalItemizedDeduction = incomeData.itemizedDeductions.stateTax
+                                                + incomeData.itemizedDeductions.mortgageInterest 
+                                                + incomeData.itemizedDeductions.other ;
 
         incomeData.totalDeduction = Math.max( incomeData.standardDeduction, incomeData.totalItemizedDeduction )
                                            + TaxRates.getPersonalExemption( incomeData.agi, TaxRates.personalExemption.phaseoutThreshold.single ); 
@@ -81,11 +96,28 @@ angular.module( "ItcApp", [] )
 
         incomeData.totalTax = incomeData.totalTaxBeforeCredits - incomeData.totalTaxCredits;
 
+        incomeData.totalTaxWithheld = incomeData.taxWithheld.income
+                                            + incomeData.taxWithheld.socialSecurity
+                                            + incomeData.taxWithheld.medicare;
+
         incomeData.netTaxWithheld = incomeData.totalTaxWithheld - incomeData.totalTax;
 
         logger.fine("summarize: exit: incomeData=" + JSON.stringify(incomeData));
 
         return incomeData;
+    };
+
+
+    /**
+     * Stringify a subset of $scope fields
+     */
+    var stringifyScope = function() {
+        return JSON.stringify( _.pick($scope, [ "inputWages",
+                                                "inputSsWages",
+                                                "inputMedicareWages",
+                                                "inputIncomeTaxWithheld",
+                                                "inputSsTaxWithheld",
+                                                "inputMedicareTaxWithheld" ] ) );
     };
 
     /**
@@ -96,12 +128,8 @@ angular.module( "ItcApp", [] )
      */
     var processForm = function() {
 
-        logger.fine("processForm: $scope=" + JSON.stringify( _.pick($scope, [ "inputWages",
-                                                                              "inputSsWages",
-                                                                              "inputMedicareWages",
-                                                                              "inputIncomeTaxWithheld",
-                                                                              "inputSsTaxWithheld",
-                                                                              "inputMedicareTaxWithheld" ] ) ) );
+        logger.fine("processForm: $scope=" + stringifyScope() );
+
         var incomeData = {
             wages: parseFloat( $scope.inputWages ), 
             interestIncome: parseFloat( $scope.inputInterestIncome ), 
@@ -110,18 +138,75 @@ angular.module( "ItcApp", [] )
             socialSecurityWages: parseFloat($scope.inputSsWages),
 
             standardDeduction: TaxRates.standardDeduction.single,
-            totalItemizedDeduction: parseFloat( $scope.inputDeductionStateTax )
-                                        + parseFloat( $scope.inputDeductionMortgageInterest )
-                                        + parseFloat( $scope.inputDeductionOther ),
 
-            totalTaxWithheld: parseFloat( $scope.inputIncomeTaxWithheld )
-                                    + parseFloat( $scope.inputSsTaxWithheld )
-                                    + parseFloat( $scope.inputMedicareTaxWithheld ),
+            itemizedDeductions: {
+                stateTax: parseFloat( $scope.inputDeductionStateTax ),
+                mortgageInterest: parseFloat( $scope.inputDeductionMortgageInterest ),
+                other: parseFloat( $scope.inputDeductionOther )
+            },
+
+            taxWithheld: {
+                income: parseFloat( $scope.inputIncomeTaxWithheld ),
+                socialSecurity: parseFloat( $scope.inputSsTaxWithheld ),
+                medicare: parseFloat( $scope.inputMedicareTaxWithheld )
+            },
 
             totalTaxCredits: parseFloat( $scope.inputTaxCredits )
         };
 
         return summarize( sanityCheck( incomeData ) );
+    };
+
+    /**
+     * Initialize the form data with the given incomeData object.
+     */
+    var initForm = function(incomeData) {
+
+        logger.fine("initForm: incomeData=" + JSON.stringify(incomeData) );
+
+        $scope.inputDeductionStateTax = incomeData.itemizedDeductions.stateTax;
+        $scope.inputDeductionOther = incomeData.itemizedDeductions.other;
+        $scope.inputDeductionMortgageInterest = incomeData.itemizedDeductions.mortgageInterest;
+        $scope.inputTaxCredits = incomeData.totalTaxCredits;
+
+        $scope.inputWages = incomeData.wages;
+        $scope.inputSsWages = incomeData.socialSecurityWages;
+        $scope.inputMedicareWages = incomeData.medicareWages;
+        $scope.inputInterestIncome = incomeData.interestIncome;
+        $scope.inputDividendIncome = incomeData.dividendIncome;
+        
+        $scope.inputIncomeTaxWithheld= incomeData.taxWithheld.income;
+        $scope.inputSsTaxWithheld = incomeData.taxWithheld.socialSecurity;
+        $scope.inputMedicareTaxWithheld = incomeData.taxWithheld.medicare;
+
+        logger.fine("initForm: $scope=" + stringifyScope() );
+    };
+
+
+    var getDefaultIncomeData = function() {
+        return {
+            wages: 100000,
+            socialSecurityWages: 115000,
+            medicareWages: 115000,
+            interestIncome: 36.93,
+            dividendIncome: 1500,
+
+            standardDeduction: TaxRates.standardDeduction.single,
+
+            itemizedDeductions: {
+                stateTax: 6729.19,
+                mortgageInterest: 0,
+                other: 200
+            },
+
+            taxWithheld: {
+                income: 20000,
+                socialSecurity: 7130,
+                medicare: 1667.50
+            },
+
+            totalTaxCredits: 1500
+        };
     };
 
     /**
@@ -137,7 +222,10 @@ angular.module( "ItcApp", [] )
     var onLoad = function() {
         logger.fine("onLoad: entry");
 
-        refreshCanvas( processForm() );
+        $scope.incomeData = summarize( sanityCheck( LocalStorage.getLocalStorage( getDefaultIncomeData() ) ) );
+        initForm( $scope.incomeData );
+
+        refreshCanvas( $scope.incomeData );
     }
 
     /**
@@ -155,8 +243,6 @@ angular.module( "ItcApp", [] )
                                         + ", prevIncome=" + prevIncome
                                         + ", prevTaxableIncome=" + prevTaxableIncome );
 
-        $scope.incomeData = incomeData;
-
         if (prevIncome !=  incomeData.totalIncome ) {
             // redraw everything (need to re-scale since the total income changed)
             prevTaxableIncome = 0;
@@ -173,25 +259,9 @@ angular.module( "ItcApp", [] )
      */
     $scope.onFormSubmit = onFormSubmit;
     $scope.getPersonalExemption = getPersonalExemption;
-    $scope.inputDeductionStateTax = "6729.19";  // state tax + charity  
-    $scope.inputDeductionOther = "200.00";  // state tax + charity  
-    $scope.inputDeductionMortgageInterest = "0";
-    $scope.inputTaxCredits = "3000";
-
-    $scope.inputWages = "111379.38";
-    $scope.inputSsWages = "118434.14";
-    $scope.inputMedicareWages = "118434.14";
-    $scope.inputInterestIncome = "36.93";
-    $scope.inputDividendIncome = "2864.33";
-    
-    $scope.inputIncomeTaxWithheld= "23694.53";
-    $scope.inputSsTaxWithheld = "7342.92";
-    $scope.inputMedicareTaxWithheld = "1717.30";
-
     $scope.TaxRates = TaxRates;
-    
-    onLoad();
 
+    onLoad();
 
 }])
 
@@ -300,7 +370,7 @@ angular.module( "ItcApp", [] )
         newCanvasElement.setAttribute("height","600");
 
         // TODO:
-        newCanvasElement.addEventListener("mousemove", onMouseMove );
+        // newCanvasElement.addEventListener("mousemove", onMouseMove );
 
         return newCanvasElement;
     };
@@ -1638,6 +1708,7 @@ angular.module( "ItcApp", [] )
 }])
 
 
+
 /**
  * Tax Rate Info - 2015
  *       
@@ -1703,6 +1774,8 @@ angular.module( "ItcApp", [] )
     /**
      * @return the personal exemption for the given agi and phaseout threshold.
      * http://www.taxpolicycenter.org/press/press-resources-pep.cfm
+     *
+     * TODO: http://fairmark.com/general-taxation/deductions/personal-exemption-phaseout/
      */
     var getPersonalExemption = function(agi, phaseoutThreshold) {
 
@@ -1926,7 +1999,59 @@ angular.module( "ItcApp", [] )
 }])
 
 
+/**
+ * Browswer local storage.
+ * Note: uses global variable window.localStorage.
+ */
+.factory("LocalStorage", [ "Logger", "_", 
+                   function(Logger,   _) {
 
+    var logger = Logger.getLogger("LocalStorage", {all:false});
+    logger.info("alive!");
+
+    /**
+     * @return true if the browser supports local storage.
+     */
+    var isLocalStorageSupported = function() {
+        var retMe = (typeof(Storage) !== "undefined");
+        logger.fine("isLocalStorageSupported: " + retMe);
+        return retMe;
+    };
+
+    /**
+     * @param obj set this object into localStorage
+     */
+    var setLocalStorage = function(obj) {
+        if (isLocalStorageSupported()) {
+            localStorage.obj = JSON.stringify(obj);
+            logger.fine("setLocalStorage: localStorage.obj=" + localStorage.obj);
+        }
+    };
+
+    /**
+     * @param defaultObj return this if localStorage is not supported or is not set.
+     *
+     * @return localStorage.obj, if supported and set, otherwise defaultObj
+     */
+    var getLocalStorage = function( defaultObj ) {
+        var retMe = defaultObj;
+        if (isLocalStorageSupported()) {
+            logger.fine("getLocalStorage: localStorage.obj=" + localStorage.obj );
+            retMe = (localStorage.obj) ? JSON.parse( localStorage.obj ) : defaultObj;
+        } 
+        logger.fine("getLocalStorage: retMe=" + JSON.stringify(retMe));
+        return retMe;
+    };
+
+    /**
+     * Export api.
+     */
+    return {
+        setLocalStorage: setLocalStorage,
+        getLocalStorage: getLocalStorage
+    };
+
+}])
 
 ;
 
