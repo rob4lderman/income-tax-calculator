@@ -254,7 +254,7 @@ angular.module( "ItcApp", [] )
     /**
      * The x-coord for the vertical income axis line
      */
-    var incomeAxisX = 150;
+    var incomeAxisX = 125;
 
     /**
      * Bar colors for the "tax withheld" bar
