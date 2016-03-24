@@ -23,7 +23,7 @@
             </div>
         </div>
     </div>
-    <div class="container" ng-controller="MainController">
+    <div class="container" ng-controller="PageController">
         <div class="col-md-4">
             <form ng-submit="onFormSubmit()">
 
@@ -553,30 +553,39 @@
                     </div>
                 </div>
 
-
                 <!-- we need this so that pressing enter in a text field will submit the form -->
                 <button type="submit" ng-show="false" >Refresh</button>
             </form>
 
-            <div class="itc-container itc-about">
-                <h5>About TransparentTax.com</h5>
-                <p>
-                    <a href="/">TransparentTax.com</a> is a prototype for a new online tax-filing service.  
-                </p>
-                <p>
-                    The site's mission is to educate people about how they are taxed, through the use of simple &amp; intuitive forms,
-                    clear charts, and nifty animations.
-                </p>
-                <p>
-                    Authored by <a href="http://www.longconnections.com/about-me/">@rob4lderman</a>
-                </p>
+            <div class="row">
+                <div class="itc-container-no-border col-md-12">
+                    <div class="itc-container itc-about">
+                        <h5>About TransparentTax.com</h5>
+                        <p>
+                            <a href="/">TransparentTax.com</a> is a prototype for a new online tax-filing service.  
+                        </p>
+                        <p>
+                            The site's mission is to educate people about how they are taxed, through the use of simple &amp; intuitive forms,
+                            clear charts, and nifty animations.
+                        </p>
+                        <p>
+                            Authored by <a href="http://www.longconnections.com/about-me/">@rob4lderman</a>
+                        </p>
+                    </div>
+                </div>
             </div>
-
 
         </div>
 
-        <div id="itc-canvas-parent" class="col-md-8">
-            <canvas id="itc-canvas" width="800" height="600"></canvas>
+        <div class="col-md-8">
+            <div class="itc-container">
+                <button class="btn btn-success btn-sm" ng-click="onClickRedraw()">Redraw</button>
+                <button class="btn btn-warning btn-sm" ng-click="onClickClearForm()">Reset Inputs</button>
+                <button class="btn btn-info btn-sm" ng-click="onClickRestoreDefaults()">Restore Defaults</button>
+            </div>
+            <div id="itc-canvas-parent">
+                <canvas id="itc-canvas" width="800" height="600"></canvas>
+            </div>
         </div>
 
     </div>

@@ -3,12 +3,42 @@ angular.module( "ItcApp", [] )
 /**
  * Controller for the input form.
  */
-.controller( "MainController", [ "$scope", "Logger", "TheCanvas", "Projector", "TaxRates", "LocalStorage",
-                         function($scope,   Logger,   TheCanvas,   Projector,   TaxRates,   LocalStorage) {
+.controller( "PageController", [ "$scope", "Logger", "TheCanvas", "Projector", "TaxRates", "LocalStorage", "IncomeData",
+                         function($scope,   Logger,   TheCanvas,   Projector,   TaxRates,   LocalStorage,   IncomeData) {
 
-    var logger = Logger.getLogger("MainController", {all: false} );
+    var logger = Logger.getLogger("PageController", {all: false} );
     logger.info("alive!");
 
+
+    /**
+     * Restore the form to the initial default.
+     */
+    var onClickRestoreDefaults = function() {
+        LocalStorage.clearLocalStorage();
+        onLoad();
+    };
+
+    /**
+     * Reset form inputs to 0.
+     */
+    var onClickClearForm = function() {
+        resetPrev();
+        LocalStorage.clearLocalStorage();
+
+        $scope.incomeData = IncomeData.summarize( IncomeData.sanityCheck( IncomeData.getClearedIncomeData() ) );
+        initForm( $scope.incomeData );
+        // Note: not setting into LocalStorage.
+
+        refreshCanvas( $scope.incomeData );
+    };
+
+    /**
+     * Redraw the canvas from scratch.
+     */
+    var onClickRedraw = function() {
+        resetPrev();
+        onFormSubmit();
+    };
 
     /**
      * Refresh the view.
@@ -20,93 +50,6 @@ angular.module( "ItcApp", [] )
 
         refreshCanvas( $scope.incomeData );
     };
-
-
-    /**
-     * TODO: much of this can be done using an angular directive on the input field to restrict input
-     *
-     * Sanity-check the incomeData.  Make sure nothing's out of whack.
-     *
-     * @return incomeData
-     */
-    var sanityCheck = function(incomeData) {
-
-        incomeData.wages = Math.max(0, incomeData.wages);
-        incomeData.interestIncome = Math.max(0, incomeData.interestIncome); 
-        incomeData.dividendIncome = Math.max(0, incomeData.dividendIncome);
-        incomeData.socialSecurityWages = Math.max(0, incomeData.socialSecurityWages);
-        incomeData.medicareWages = Math.max(0, incomeData.medicareWages);
-        
-        incomeData.taxWithheld.income = Math.max(0, incomeData.taxWithheld.income);
-        incomeData.taxWithheld.socialSecurity = Math.max(0, incomeData.taxWithheld.socialSecurity);
-        incomeData.taxWithheld.medicare = Math.max(0, incomeData.taxWithheld.medicare);
-        
-        incomeData.itemizedDeductions.stateTax = Math.max(0, incomeData.itemizedDeductions.stateTax);
-        incomeData.itemizedDeductions.mortgageInterest = Math.max(0, incomeData.itemizedDeductions.mortgageInterest);
-        incomeData.itemizedDeductions.other = Math.max(0, incomeData.itemizedDeductions.other);
-
-        incomeData.totalTaxCredits = Math.max(0, incomeData.totalTaxCredits);
-
-        return incomeData;
-    };
-
-    /**
-     * @param incomeData as read from the form
-     *
-     * @return incomeData with extra summary fields.
-     */
-    var summarize = function(incomeData) {
-
-        logger.fine("summarize: entry: incomeData=" + JSON.stringify(incomeData));
-
-        incomeData.agi = incomeData.wages + incomeData.interestIncome + incomeData.dividendIncome;
-
-        incomeData.totalItemizedDeduction = incomeData.itemizedDeductions.stateTax
-                                                + incomeData.itemizedDeductions.mortgageInterest 
-                                                + incomeData.itemizedDeductions.other ;
-
-        incomeData.totalDeduction = Math.max( incomeData.standardDeduction, incomeData.totalItemizedDeduction )
-                                           + TaxRates.getPersonalExemption( incomeData.agi, TaxRates.personalExemption.phaseoutThreshold.single ); 
-
-        // totalDeduction cannot be more than agi.
-        incomeData.totalDeduction = Math.min( incomeData.totalDeduction, incomeData.agi );
-
-        incomeData.taxableAgi = incomeData.agi - incomeData.totalDeduction;
-
-        incomeData.totalIncome = Math.max( incomeData.medicareWages + incomeData.interestIncome + incomeData.dividendIncome,
-                                           incomeData.agi );
-
-        // compute taxes.
-        incomeData.incomeTax = _.reduce(TaxRates.getBrackets( incomeData.taxableAgi ), 
-                                        function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, incomeData.taxableAgi ); }, 
-                                        0 );
-
-        incomeData.socialSecurityTax = TaxRates.getTaxedAmount( TaxRates.socialsecurity.single, incomeData.socialSecurityWages );
-
-        incomeData.medicareTax = _.reduce(TaxRates.getMedicareBrackets( incomeData.medicareWages ), 
-                                          function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, incomeData.medicareWages ); }, 
-                                          0 );
-
-
-        incomeData.totalTaxBeforeCredits =  incomeData.incomeTax + incomeData.socialSecurityTax + incomeData.medicareTax ;
-
-        // TODO: refundable vs non-refundable credits.
-        //       for now assume all non-refundable (i.e. tax credit can't exceed tax due).
-        incomeData.totalTaxCredits = Math.min( incomeData.totalTaxBeforeCredits, incomeData.totalTaxCredits );
-
-        incomeData.totalTax = incomeData.totalTaxBeforeCredits - incomeData.totalTaxCredits;
-
-        incomeData.totalTaxWithheld = incomeData.taxWithheld.income
-                                            + incomeData.taxWithheld.socialSecurity
-                                            + incomeData.taxWithheld.medicare;
-
-        incomeData.netTaxWithheld = incomeData.totalTaxWithheld - incomeData.totalTax;
-
-        logger.fine("summarize: exit: incomeData=" + JSON.stringify(incomeData));
-
-        return incomeData;
-    };
-
 
     /**
      * Stringify a subset of $scope fields
@@ -154,7 +97,7 @@ angular.module( "ItcApp", [] )
             totalTaxCredits: parseFloat( $scope.inputTaxCredits )
         };
 
-        return summarize( sanityCheck( incomeData ) );
+        return IncomeData.summarize( IncomeData.sanityCheck( incomeData ) );
     };
 
     /**
@@ -182,33 +125,6 @@ angular.module( "ItcApp", [] )
         logger.fine("initForm: $scope=" + stringifyScope() );
     };
 
-
-    var getDefaultIncomeData = function() {
-        return {
-            wages: 100000,
-            socialSecurityWages: 115000,
-            medicareWages: 115000,
-            interestIncome: 36.93,
-            dividendIncome: 1500,
-
-            standardDeduction: TaxRates.standardDeduction.single,
-
-            itemizedDeductions: {
-                stateTax: 6729.19,
-                mortgageInterest: 0,
-                other: 200
-            },
-
-            taxWithheld: {
-                income: 20000,
-                socialSecurity: 7130,
-                medicare: 1667.50
-            },
-
-            totalTaxCredits: 1500
-        };
-    };
-
     /**
      * @return the personal exemption for the user's agi.
      */
@@ -222,7 +138,8 @@ angular.module( "ItcApp", [] )
     var onLoad = function() {
         logger.fine("onLoad: entry");
 
-        $scope.incomeData = summarize( sanityCheck( LocalStorage.getLocalStorage( getDefaultIncomeData() ) ) );
+        resetPrev();
+        $scope.incomeData = IncomeData.summarize( IncomeData.sanityCheck( LocalStorage.getLocalStorage( IncomeData.getDefaultIncomeData() ) ) );
         initForm( $scope.incomeData );
 
         refreshCanvas( $scope.incomeData );
@@ -235,7 +152,26 @@ angular.module( "ItcApp", [] )
     var prevIncome = 0;
 
     /**
-     * Note: sets $scope.incomeData.
+     * Save "prev" income data.  The prev data is saved so as to 
+     * only redraw what needs to be redrawn, rather than redrawing
+     * the entire canvas whenever the form is updated.
+     */
+    var savePrev = function(incomeData) {
+        prevIncome = incomeData.totalIncome;
+        prevTaxableIncome = incomeData.agi - incomeData.totalDeduction;
+    };
+
+    /**
+     * Reset prev data.  This will cause the next refreshCanvas to redrwa
+     * the entire canvas.
+     */
+    var resetPrev = function() {
+        prevIncome = 0;
+        prevTaxableIncome = 0;
+    };
+    
+    /**
+     * Update the canvas.
      */
     var refreshCanvas = function( incomeData ) {
 
@@ -250,14 +186,16 @@ angular.module( "ItcApp", [] )
 
         TheCanvas.refresh( incomeData, prevTaxableIncome );
 
-        prevIncome = incomeData.totalIncome;
-        prevTaxableIncome = incomeData.agi - incomeData.totalDeduction;
+        savePrev( incomeData );
     };
 
     /**
      * Init and Export to scope
      */
     $scope.onFormSubmit = onFormSubmit;
+    $scope.onClickRedraw = onClickRedraw;
+    $scope.onClickRestoreDefaults = onClickRestoreDefaults;
+    $scope.onClickClearForm = onClickClearForm ;
     $scope.getPersonalExemption = getPersonalExemption;
     $scope.TaxRates = TaxRates;
 
@@ -701,7 +639,7 @@ angular.module( "ItcApp", [] )
         canvas.strokeStyle = "#888888";
         canvas.lineWidth = 1;
         drawLine( canvas,
-                  {x: getIncomeAxisX(), y: 0}, 
+                  {x: getIncomeAxisLabelX(), y: 0}, 
                   {x: getTaxWithheldBarX() + 120,  y: 0 } );
 
         canvas.restore();
@@ -723,7 +661,7 @@ angular.module( "ItcApp", [] )
         canvas.fillText( "Brackets", getIncomeAxisLabelX() + 10, -5);
         canvas.fillText( "Income", getIncomeAxisX() + 10, -5);
         canvas.fillText( "Tax", getTaxBarX() + 10, -5);
-        canvas.fillText( "Total Tax", getTotalTaxBarX() + 10, -5);  
+        canvas.fillText( "Total Tax Due", getTotalTaxBarX() + 5, -5);  
         canvas.fillText( "Tax Withheld", getTaxWithheldBarX() + 10, -5);  
 
         canvas.restore();
@@ -1199,7 +1137,9 @@ angular.module( "ItcApp", [] )
                                 return retMe;
                              } );
 
-        states[ states.length - 1].topTopLabel = "Medicare";
+        if (states.length > 0) {
+            states[ states.length - 1].topTopLabel = "Medicare";
+        };
 
         var renderFn = function(state) {
             translate(state.canvas, state.frame);
@@ -1814,14 +1754,24 @@ angular.module( "ItcApp", [] )
     /**
      * Color palette for brackets, used when drawing the income bar.
      */
+
     var bracketFillStyles = [   "#000000",
-                                "#EBC0FD",
-                                "#D5C0FD",
-                                "#C0C0FD",
-                                "#C0FCFD",
-                                "#C0FDD7",
-                                "#F8FDC0",
-                                "#FDD2C0" ];
+                                "#F6CEF5",
+                                "#CECEF6",
+                                "#CEF6E3",
+                                "#ECF6CE",
+                                "#F6E3CE",
+                                "#F6CECE",
+                                "#F5A9D0" ];
+        
+    // -rx- var bracketFillStyles = [   "#000000",
+    // -rx-                             "#EBC0FD",
+    // -rx-                             "#D5C0FD",
+    // -rx-                             "#C0C0FD",
+    // -rx-                             "#C0FCFD",
+    // -rx-                             "#C0FDD7",
+    // -rx-                             "#F8FDC0",
+    // -rx-                             "#FDD2C0" ];
 
     /**
      * @return all brackets applicable to the given income
@@ -2024,8 +1974,31 @@ angular.module( "ItcApp", [] )
     var setLocalStorage = function(obj) {
         if (isLocalStorageSupported()) {
             localStorage.obj = JSON.stringify(obj);
-            logger.fine("setLocalStorage: localStorage.obj=" + localStorage.obj);
+            logger.fine("setLocalStorage: localStorage=" + JSON.stringify(localStorage) );
         }
+    };
+
+    /**
+     * Set localStorage.obj = null;
+     */
+    var clearLocalStorage = function() {
+        if (isLocalStorageSupported()) {
+            if ( !_.isUndefined( localStorage.obj ) ) {
+                delete localStorage.obj;
+                logger.fine("clearLocalStorage: localStorage=" + JSON.stringify(localStorage));
+            }
+        }
+    };
+
+    /**
+     * @return true if local storage isn't supported, or if it's undefined, or if it's empty,
+     *         or if it equals "null"
+     */
+    var isEmpty = function() {
+        return !isLocalStorageSupported()
+                    || _.isUndefined( localStorage.obj )
+                    || _.isEmpty( localStorage.obj )
+                    || localStorage.obj == "null";
     };
 
     /**
@@ -2036,8 +2009,8 @@ angular.module( "ItcApp", [] )
     var getLocalStorage = function( defaultObj ) {
         var retMe = defaultObj;
         if (isLocalStorageSupported()) {
-            logger.fine("getLocalStorage: localStorage.obj=" + localStorage.obj );
-            retMe = (localStorage.obj) ? JSON.parse( localStorage.obj ) : defaultObj;
+            logger.fine("getLocalStorage: localStorage=" + JSON.stringify(localStorage) );
+            retMe = isEmpty() ? defaultObj : JSON.parse( localStorage.obj ) ;
         } 
         logger.fine("getLocalStorage: retMe=" + JSON.stringify(retMe));
         return retMe;
@@ -2048,8 +2021,177 @@ angular.module( "ItcApp", [] )
      */
     return {
         setLocalStorage: setLocalStorage,
-        getLocalStorage: getLocalStorage
+        getLocalStorage: getLocalStorage,
+        clearLocalStorage: clearLocalStorage
     };
+
+}])
+
+
+/**
+ * Income data, as inputed by the user to the form.
+ *
+ */
+.factory("IncomeData", [ "Logger", "_", "TaxRates",
+                 function(Logger,   _,   TaxRates) {
+
+    var logger = Logger.getLogger("IncomeData", {all:false});
+    logger.info("alive!");
+
+    /**
+     * TODO: much of this can be done using an angular directive on the input field to restrict input
+     *
+     * Sanity-check the incomeData.  Make sure nothing's out of whack.
+     *
+     * @return incomeData
+     */
+    var sanityCheck = function(incomeData) {
+
+        incomeData.wages = Math.max(0, incomeData.wages);
+        incomeData.interestIncome = Math.max(0, incomeData.interestIncome); 
+        incomeData.dividendIncome = Math.max(0, incomeData.dividendIncome);
+        incomeData.socialSecurityWages = Math.max(0, incomeData.socialSecurityWages);
+        incomeData.medicareWages = Math.max(0, incomeData.medicareWages);
+        
+        incomeData.taxWithheld.income = Math.max(0, incomeData.taxWithheld.income);
+        incomeData.taxWithheld.socialSecurity = Math.max(0, incomeData.taxWithheld.socialSecurity);
+        incomeData.taxWithheld.medicare = Math.max(0, incomeData.taxWithheld.medicare);
+        
+        incomeData.itemizedDeductions.stateTax = Math.max(0, incomeData.itemizedDeductions.stateTax);
+        incomeData.itemizedDeductions.mortgageInterest = Math.max(0, incomeData.itemizedDeductions.mortgageInterest);
+        incomeData.itemizedDeductions.other = Math.max(0, incomeData.itemizedDeductions.other);
+
+        incomeData.totalTaxCredits = Math.max(0, incomeData.totalTaxCredits);
+
+        return incomeData;
+    };
+
+    /**
+     * @param raw incomeData, as read from the form
+     *
+     * @return incomeData with extra summary fields.
+     */
+    var summarize = function(incomeData) {
+
+        logger.fine("summarize: entry: incomeData=" + JSON.stringify(incomeData));
+
+        incomeData.agi = incomeData.wages + incomeData.interestIncome + incomeData.dividendIncome;
+
+        incomeData.totalItemizedDeduction = incomeData.itemizedDeductions.stateTax
+                                                + incomeData.itemizedDeductions.mortgageInterest 
+                                                + incomeData.itemizedDeductions.other ;
+
+        incomeData.totalDeduction = Math.max( incomeData.standardDeduction, incomeData.totalItemizedDeduction )
+                                           + TaxRates.getPersonalExemption( incomeData.agi, TaxRates.personalExemption.phaseoutThreshold.single ); 
+
+        // totalDeduction cannot be more than agi.
+        incomeData.totalDeduction = Math.min( incomeData.totalDeduction, incomeData.agi );
+
+        incomeData.taxableAgi = incomeData.agi - incomeData.totalDeduction;
+
+        incomeData.totalIncome = Math.max( incomeData.medicareWages + incomeData.interestIncome + incomeData.dividendIncome,
+                                           incomeData.agi );
+
+        // compute taxes.
+        incomeData.incomeTax = _.reduce(TaxRates.getBrackets( incomeData.taxableAgi ), 
+                                        function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, incomeData.taxableAgi ); }, 
+                                        0 );
+
+        incomeData.socialSecurityTax = TaxRates.getTaxedAmount( TaxRates.socialsecurity.single, incomeData.socialSecurityWages );
+
+        incomeData.medicareTax = _.reduce(TaxRates.getMedicareBrackets( incomeData.medicareWages ), 
+                                          function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, incomeData.medicareWages ); }, 
+                                          0 );
+
+
+        incomeData.totalTaxBeforeCredits =  incomeData.incomeTax + incomeData.socialSecurityTax + incomeData.medicareTax ;
+
+        // TODO: refundable vs non-refundable credits.
+        //       for now assume all non-refundable (i.e. tax credit can't exceed tax due).
+        incomeData.totalTaxCredits = Math.min( incomeData.totalTaxBeforeCredits, incomeData.totalTaxCredits );
+
+        incomeData.totalTax = incomeData.totalTaxBeforeCredits - incomeData.totalTaxCredits;
+
+        incomeData.totalTaxWithheld = incomeData.taxWithheld.income
+                                            + incomeData.taxWithheld.socialSecurity
+                                            + incomeData.taxWithheld.medicare;
+
+        incomeData.netTaxWithheld = incomeData.totalTaxWithheld - incomeData.totalTax;
+
+        logger.fine("summarize: exit: incomeData=" + JSON.stringify(incomeData));
+
+        return incomeData;
+    };
+
+    /**
+     * @return default incomeData for initial population into the form.
+     */
+    var getDefaultIncomeData = function() {
+        return {
+            wages: 100000,
+            socialSecurityWages: 115000,
+            medicareWages: 115000,
+            interestIncome: 36.93,
+            dividendIncome: 1500,
+
+            standardDeduction: TaxRates.standardDeduction.single,
+
+            itemizedDeductions: {
+                stateTax: 6729.19,
+                mortgageInterest: 0,
+                other: 200
+            },
+
+            taxWithheld: {
+                income: 20000,
+                socialSecurity: 7130,
+                medicare: 1667.50
+            },
+
+            totalTaxCredits: 1500
+        };
+    };
+
+    /**
+     * @return default incomeData for initial population into the form.
+     */
+    var getClearedIncomeData = function() {
+        return {
+            wages: 0,
+            socialSecurityWages: 0,
+            medicareWages: 0,
+            interestIncome: 0,
+            dividendIncome: 0,
+
+            standardDeduction: TaxRates.standardDeduction.single,
+
+            itemizedDeductions: {
+                stateTax: 0,
+                mortgageInterest: 0,
+                other: 0
+            },
+
+            taxWithheld: {
+                income: 0,
+                socialSecurity: 0,
+                medicare: 0
+            },
+
+            totalTaxCredits: 0
+        };
+    };
+
+
+    /**
+     * Export api.
+     */
+    return {
+        sanityCheck: sanityCheck,
+        summarize: summarize,
+        getDefaultIncomeData: getDefaultIncomeData,
+        getClearedIncomeData: getClearedIncomeData
+    };
+
 
 }])
 

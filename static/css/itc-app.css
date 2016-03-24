@@ -6,7 +6,7 @@
 }
 
 #itc-page-header {
-    height: 50px;
+    /* height: 50px; */
     background-color: #cff;
     line-height: 30px;
     padding: 10px 0px;
@@ -36,7 +36,7 @@ a:hover, #tm-page-header a:hover {
 
 #itc-canvas {
     margin-top: 15px;
-    position: fixed;
+    /* position: fixed; TODO: this causes the canvas to disappear on mobile */
     border: solid 0px #ccc;
 }
 
