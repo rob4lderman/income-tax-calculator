@@ -2148,7 +2148,7 @@ angular.module( "ItcApp", [] )
                 medicare: 1667.50
             },
 
-            totalTaxCredits: 1500
+            totalTaxCredits: 0
         };
     };
 
