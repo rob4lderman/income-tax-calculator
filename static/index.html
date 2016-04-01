@@ -116,22 +116,44 @@
                                 </span>
                                 <div class="itc-help" ng-if="showDividendIncomeHelp">
                                     <p>
-                                        <em>1099-DIV: Dividend income</em>: Income from ordinary dividends, e.g. from stock ownership.  Your financial institution
-                                        should provide you with a 1099-DIV form indicating the amount of dividends earned.
+                                        <em>1099-DIV Box 1a: Total Ordinary Dividends</em>: Total income from dividends, e.g. from stock ownership.  
+                                    </p>
+                                    <p>
+                                        Your financial institution should provide you with a 1099-DIV form indicating the amount of dividends earned.
                                     </p>
                                     <p>
                                         Dividends fall into two categories:
                                     </p>
                                     <ul>
-                                        <li><em>Ordinary dividends</em>: Taxed the same as ordinary income.  Most dividends are ordinary dividends.</li>
+                                        <li><em>Ordinary dividends</em>: Taxed the same as ordinary income. </li>
                                         <li><em>Qualified dividends</em>: Taxed at a lower rate, closer to the capital gains tax rate.</li>
                                     </ul>
                                     <p>
                                         Learn more at <a href="https://www.irs.gov/publications/p550/ch01.html#en_US_2015_publink100010066">irs.gov</a>
                                     </p>
                                 </div>
-                                <input id="itc-input-dividend-income" type="text" class="form-control input-sm itc-input" ng-model="inputDividendIncome" itc-currency-input placeholder="Ordinary Dividend Income" />
+                                <input id="itc-input-total-ordinary-dividends" type="text" class="form-control input-sm itc-input" ng-model="inputTotalOrdinaryDividends" itc-currency-input placeholder="Ordinary Dividends" />
                             </div>
+
+                            <div class="form-group" ng-init="showQualifiedDividendsHelp=false">
+                                <span class="itc-label">Qualified Dividends
+                                    <small class="itc-show-more"><a tabindex="-1" href="" ng-click="showQualifiedDividendsHelp = !showQualifiedDividendsHelp">[?]</a></small>
+                                </span>
+                                <div class="itc-help" ng-if="showQualifiedDividendsHelp">
+                                    <p>
+                                        <em>1099-DIV Box 1b: Qualified Dividends</em>: The portion of total ordinary dividends
+                                        that are qualified dividends.
+                                    </p>
+                                    <p>
+                                        <em>Qualified dividends</em> are taxed at a lower rate than ordinary dividends.
+                                    </p>
+                                    <p>
+                                        Learn more at <a href="https://www.irs.gov/publications/p550/ch01.html#en_US_2015_publink100010066">irs.gov</a>
+                                    </p>
+                                </div>
+                                <input id="itc-input-qualified-dividends" type="text" class="form-control input-sm itc-input" ng-model="inputQualifiedDividends" itc-currency-input placeholder="Qualified Dividends" />
+                            </div>
+
 
                             <hr />
                             <div class="form-group" ng-init="showTotalIncomeHelp=false">
@@ -261,6 +283,28 @@
                                 </div>
                             </div>
 
+                            <div class="form-group" ng-init="showIncomeTaxDueHelp=false" >
+                                <span class="itc-label">Income Tax Due
+                                    <small class="itc-show-more">
+                                        <a tabindex="-1" href="" ng-click="showIncomeTaxDueHelp = !showIncomeTaxDueHelp">[?]</a>
+                                    </small>
+                                </span>
+                                <div class="itc-help" ng-if="showIncomeTaxDueHelp">
+                                    <p>
+                                        The amount of federal income tax you owe.
+                                    </p>
+                                </div>
+                                <div>
+                                    <span class="itc-label-value" ng-if="incomeData.totalTaxCredits >= 1">
+                                        (before credits) {{ incomeData.totalIncomeTaxBeforeCredits | currency:'$':2 }} 
+                                    </span>
+                                    <span class="itc-label-value">
+                                        <span ng-if="incomeData.totalTaxCredits >= 1">(after credits)</span>
+                                        {{ incomeData.totalIncomeTax | currency:'$':2 }} 
+                                    </span>
+                                </div>
+                            </div>
+
                             <div class="form-group" ng-init="showTaxDueHelp=false" >
                                 <span class="itc-label">Total Tax Due
                                     <small class="itc-show-more">
@@ -269,7 +313,7 @@
                                 </span>
                                 <div class="itc-help" ng-if="showTaxDueHelp">
                                     <p>
-                                        The amount of federal income tax you owe.
+                                        The amount of federal income taxes you owe, including social security and medicare taxes.
                                     </p>
                                 </div>
                                 <div>
@@ -578,10 +622,39 @@
         </div>
 
         <div class="col-md-8">
-            <div class="itc-container">
+            <div class="itc-container" ng-init="showChartHelp=false">
                 <button class="btn btn-success btn-sm" ng-click="onClickRedraw()">Redraw</button>
                 <button class="btn btn-warning btn-sm" ng-click="onClickClearForm()">Reset Inputs</button>
                 <button class="btn btn-info btn-sm" ng-click="onClickRestoreDefaults()">Restore Defaults</button>
+
+                <small class="itc-show-more"><a tabindex="-1" href="" ng-click="showChartHelp = !showChartHelp">[explain chart]</a></small>
+
+                <div class="itc-help" ng-if="showChartHelp">
+                    <hr />
+                    <div class="col-md-6">
+                        <ul>
+                            <li><em>Brackets</em>: The tax brackets.  Only those brackets that apply to your income are shown.  </li>
+                            <li><em>Income</em>: Your income, color-coded by tax-bracket. The gray portion at the top represents your deductions. </li>
+                            <li><em>Bracket Tax</em>: The amount of tax due for each bracket. </li>
+                            <li><em>Social Security</em>: Social security wages, and the amount of social security tax. </li>
+                            <li><em>Medicare</em>: Medicare wages/brackets, and the amount of medicare tax. </li>
+                            <li><em>Total Tax Due</em>: The total amount of federal income taxes due, including social security and medicare taxes. </li>
+                            <li><em>Tax Withheld</em>: The amount of tax withheld. The net difference between tax withheld and total tax due is your refund (or bill).</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <p>
+                            For each bracket, the bracket tax rate applies <em>only to income that falls within that bracket</em>.
+                        </p>
+                        <p>
+                            <em>Social security and medicare taxes</em> are taxed separately and typically apply to your entire income (with exceptions).
+                        </p>
+                        <p>
+                            Note that <em>qualified dividends</em> are included in your taxable AGI, but are taxed at a lower rate than the bracket rate.
+                        </p>
+                    </div>
+                </div>
+
             </div>
             <div id="itc-canvas-parent">
                 <canvas id="itc-canvas" width="800" height="600"></canvas>

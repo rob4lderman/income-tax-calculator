@@ -76,7 +76,8 @@ angular.module( "ItcApp", [] )
         var incomeData = {
             wages: parseFloat( $scope.inputWages ), 
             interestIncome: parseFloat( $scope.inputInterestIncome ), 
-            dividendIncome: parseFloat( $scope.inputDividendIncome ),
+            totalOrdinaryDividends: parseFloat( $scope.inputTotalOrdinaryDividends ),
+            qualifiedDividends: parseFloat( $scope.inputQualifiedDividends ),
             medicareWages: parseFloat($scope.inputMedicareWages),
             socialSecurityWages: parseFloat($scope.inputSsWages),
 
@@ -116,7 +117,8 @@ angular.module( "ItcApp", [] )
         $scope.inputSsWages = incomeData.socialSecurityWages;
         $scope.inputMedicareWages = incomeData.medicareWages;
         $scope.inputInterestIncome = incomeData.interestIncome;
-        $scope.inputDividendIncome = incomeData.dividendIncome;
+        $scope.inputTotalOrdinaryDividends = incomeData.totalOrdinaryDividends;
+        $scope.inputQualifiedDividends = incomeData.qualifiedDividends;
         
         $scope.inputIncomeTaxWithheld= incomeData.taxWithheld.income;
         $scope.inputSsTaxWithheld = incomeData.taxWithheld.socialSecurity;
@@ -158,7 +160,7 @@ angular.module( "ItcApp", [] )
      */
     var savePrev = function(incomeData) {
         prevIncome = incomeData.totalIncome;
-        prevTaxableIncome = incomeData.agi - incomeData.totalDeduction;
+        prevTaxableIncome = incomeData.taxableAgi ;
     };
 
     /**
@@ -244,8 +246,8 @@ angular.module( "ItcApp", [] )
  * The canvas element
  *       
  */
-.factory("TheCanvas", [ "Logger", "_", "$q", "TaxRates",  "Projector", "$filter",
-                function(Logger,   _,   $q,   TaxRates,    Projector,   $filter) {
+.factory("TheCanvas", [ "Logger", "_", "$q", "TaxRates",  "Projector", "$filter", "IncomeData",
+                function(Logger,   _,   $q,   TaxRates,    Projector,   $filter,   IncomeData) {
 
 
     var logger = Logger.getLogger("TheCanvas", {info: false} );
@@ -660,7 +662,7 @@ angular.module( "ItcApp", [] )
         canvas.textAlign = "start";
         canvas.fillText( "Brackets", getIncomeAxisLabelX() + 10, -5);
         canvas.fillText( "Income", getIncomeAxisX() + 10, -5);
-        canvas.fillText( "Tax", getTaxBarX() + 10, -5);
+        canvas.fillText( "Bracket Tax", getTaxBarX() + 10, -5);
         canvas.fillText( "Total Tax Due", getTotalTaxBarX() + 5, -5);  
         canvas.fillText( "Tax Withheld", getTaxWithheldBarX() + 10, -5);  
 
@@ -751,10 +753,10 @@ angular.module( "ItcApp", [] )
     /**
      * @return label for taxed amount, e.g. "$1234"
      */
-    var getTaxedAmountLabel = function( bracket, income) {
+    var getTaxedAmountLabel = function( bracket, taxedAmount) {
         return (bracket.rate == 0) 
                     ? ""
-                    : bracket.rateLabel + " = " + $filter("currency")( TaxRates.getTaxedAmount(bracket,income), "$", 0);
+                    : bracket.rateLabel + " = " + $filter("currency")( taxedAmount, "$", 0);
     };
 
     /**
@@ -769,19 +771,17 @@ angular.module( "ItcApp", [] )
     /**
      * @return an array of animate() calls, for each of the tax brackets.
      */
-    var buildBracketTaxRateLabelAnimations = function(canvas, income, ppdFn) {
-
-        var brackets = TaxRates.getBrackets(income);
+    var buildBracketTaxRateLabelAnimations = function(canvas, incomeData, ppdFn) {
 
         // Configure initial state(s).
-        var states = _.map( brackets,
+        var states = _.map( TaxRates.getBrackets(incomeData.taxableAgi),
                             function(bracket) {
                                 return { // label: genTaxRateLabel(bracket, income),
-                                         label:  getTaxedAmountLabel(bracket, income),
+                                         label:  getTaxedAmountLabel(bracket, IncomeData.getTaxForBracket(bracket, incomeData)), 
                                          x: getTaxBarX() + 5,
                                          // y: ppdFn( Math.min(bracket.top,income) - (TaxRates.getBracketSize(bracket, income)/2) ) } ;
                                          // y: ppdFn( Math.min(bracket.top,income) ) - 15 } ;
-                                         y: ppdFn( bracket.bottom + TaxRates.getTaxedAmount(bracket,income) ) + 5 ,
+                                         y: ppdFn( bracket.bottom + IncomeData.getTaxForBracket(bracket,incomeData) ) + 5 ,
                                          canvas: canvas,
                                          frame: frame1
                                        } ;
@@ -1003,15 +1003,16 @@ angular.module( "ItcApp", [] )
     var buildSocialSecurityTaxRateLabelAnimation = function(canvas, income, ppdFn) {
 
         var bracket = TaxRates.socialsecurity.single;
+        var taxedAmount = TaxRates.getTaxedAmount(bracket, income);
 
         // Configure state.
-        var state = { label: getTaxedAmountLabel(bracket, income),
+        var state = { label: getTaxedAmountLabel(bracket, taxedAmount),
                       topLabel: getBracketTopLabel(bracket, income),
                       topTopLabel: "Social Security",
                       x: getSocialSecurityTaxBarX(),
                       topY: ppdFn( TaxRates.getBracketTop( bracket,income) ) + 7,
                       topTopY: ppdFn( TaxRates.getBracketTop( bracket,income) ) + 20,
-                      y: ppdFn( TaxRates.getBracketTop( bracket,income) ) - ppdFn( TaxRates.getTaxedAmount(bracket, income) ) - 15,
+                      y: ppdFn( TaxRates.getBracketTop( bracket,income) ) - ppdFn( taxedAmount ) - 15,
                       canvas: canvas,
                       frame: frame1
                     };
@@ -1124,13 +1125,14 @@ angular.module( "ItcApp", [] )
 
         var states = _.map( TaxRates.getMedicareBrackets(incomeData.medicareWages),
                             function(bracket) {
-                                var retMe = { label: getTaxedAmountLabel(bracket, incomeData.medicareWages),
+                                var taxedAmount = TaxRates.getTaxedAmount(bracket, incomeData.medicareWages);
+                                var retMe = { label: getTaxedAmountLabel(bracket, taxedAmount),
                                               topLabel: getBracketTopLabel(bracket, incomeData.medicareWages),
                                               topTopLabel: "",          // Only the last bracket (top-most) will get the "Medicare" label
                                               x: getMedicareTaxBarX(),
                                               topY: ppdFn( TaxRates.getBracketTop( bracket,incomeData.medicareWages) ) + 7,
                                               topTopY: ppdFn( TaxRates.getBracketTop( bracket,incomeData.medicareWages) ) + 20,
-                                              y: ppdFn( TaxRates.getBracketTop( bracket,incomeData.medicareWages) ) - ppdFn( TaxRates.getTaxedAmount(bracket, incomeData.medicareWages) ) - 15,
+                                              y: ppdFn( TaxRates.getBracketTop( bracket,incomeData.medicareWages) ) - ppdFn( taxedAmount ) - 15,
                                               canvas: canvas,
                                               frame: frame1
                                             };
@@ -1187,17 +1189,17 @@ angular.module( "ItcApp", [] )
      * @return an array of animate() calls, for each of the tax brackets.
      *
      */
-    var buildTotalTaxTaxBarAnimations = function(canvas, income, ppdFn, prevIncome) {
+    var buildTotalTaxTaxBarAnimations = function(canvas, incomeData, ppdFn, prevTaxableIncome) {
 
         // Configure initial state(s).
         var prevTopPixel = 0;
-        var states = _.map( TaxRates.getBrackets(income),
+        var states = _.map( TaxRates.getBrackets(incomeData.taxableAgi),
                             function(bracket) {
-                                var endHeight = ppdFn( TaxRates.getTaxedAmount(bracket, income) );
+                                var endHeight = ppdFn( IncomeData.getTaxForBracket(bracket, incomeData) );
                                 var retMe = { x: getTotalTaxBarX(),
                                               y: prevTopPixel + 1,
                                               w: barWidth,
-                                              h: shouldAnimate(bracket, income, prevIncome) ? 0 : endHeight,
+                                              h: shouldAnimate(bracket, incomeData.taxableAgi, prevTaxableIncome) ? 0 : endHeight,
                                               endHeight: endHeight,
                                               canvas: canvas,
                                               frame: frame1
@@ -1276,16 +1278,16 @@ angular.module( "ItcApp", [] )
     /**
      * @return an array of animate() calls, for each of the tax brackets.
      */
-    var buildTaxBarAnimations = function(canvas, income, ppdFn, prevIncome) {
+    var buildTaxBarAnimations = function(canvas, incomeData, ppdFn, prevTaxableIncome) {
 
         // Configure initial state(s).
-        var states = _.map( TaxRates.getBrackets(income),
+        var states = _.map( TaxRates.getBrackets(incomeData.taxableAgi),
                             function(bracket) {
-                                var endHeight = ppdFn( TaxRates.getTaxedAmount(bracket, income) );
+                                var endHeight = ppdFn( IncomeData.getTaxForBracket(bracket, incomeData) );
                                 return { x: getTaxBarX(),
                                          y: ppdFn( bracket.bottom ) + 1,
                                          w: barWidth,
-                                         h: shouldAnimate(bracket, income, prevIncome) ? 0 : endHeight,
+                                         h: shouldAnimate(bracket, incomeData.taxableAgi, prevTaxableIncome) ? 0 : endHeight,
                                          endHeight: endHeight,
                                          canvas: canvas,
                                          frame: frame1
@@ -1510,13 +1512,13 @@ angular.module( "ItcApp", [] )
                                );
 
         // Tax bar animations
-        var taxBarAnimations = buildTaxBarAnimations(canvas, incomeData.taxableAgi, ppdFn, prevTaxableIncome); 
+        var taxBarAnimations = buildTaxBarAnimations(canvas, incomeData, ppdFn, prevTaxableIncome); 
         taxBarAnimations = partitionAndAttach( start, taxBarAnimations, animateBracketsFlags );
 
-        var totalTaxTaxBarAnimations = buildTotalTaxTaxBarAnimations(canvas, incomeData.taxableAgi, ppdFn, prevTaxableIncome); 
+        var totalTaxTaxBarAnimations = buildTotalTaxTaxBarAnimations(canvas, incomeData, ppdFn, prevTaxableIncome); 
         totalTaxTaxBarAnimations = partitionAndAttach( start, totalTaxTaxBarAnimations, animateBracketsFlags );
 
-        var taxBarLabelAnimations = buildBracketTaxRateLabelAnimations(canvas, incomeData.taxableAgi, ppdFn) 
+        var taxBarLabelAnimations = buildBracketTaxRateLabelAnimations(canvas, incomeData, ppdFn) 
         taxBarLabelAnimations = partitionAndAttach( start, taxBarLabelAnimations, animateBracketsFlags );
 
         // Kick off the social security bracket line at the same time as the first
@@ -1662,32 +1664,32 @@ angular.module( "ItcApp", [] )
     /**
      * Tax brackets
      */
-    var brackets = { single: [ { rate: 0,    rateLabel: "",     bottom: 0,      top: 0 },
-                               { rate: 0.10, rateLabel: "10%",  bottom: 0,      top: 9225 },
-                               { rate: 0.15, rateLabel: "15%",  bottom: 9225,   top: 37450 },
-                               { rate: 0.25, rateLabel: "25%",  bottom: 37450,  top: 90750 },
-                               { rate: 0.28, rateLabel: "28%",  bottom: 90750,  top: 189300 },
-                               { rate: 0.33, rateLabel: "33%",  bottom: 189300, top: 411500 },
-                               { rate: 0.35, rateLabel: "35%",  bottom: 411500, top: 413200 },
-                               { rate: 0.39, rateLabel: "39%",  bottom: 413200, top: Number.MAX_VALUE } 
+    var brackets = { single: [ { rate: 0,    rateLabel: "",     qualifiedDividendRate: 0,    bottom: 0,      top: 0 },
+                               { rate: 0.10, rateLabel: "10%",  qualifiedDividendRate: 0,    bottom: 0,      top: 9225 },
+                               { rate: 0.15, rateLabel: "15%",  qualifiedDividendRate: 0,    bottom: 9225,   top: 37450 },
+                               { rate: 0.25, rateLabel: "25%",  qualifiedDividendRate: 0.15, bottom: 37450,  top: 90750 },
+                               { rate: 0.28, rateLabel: "28%",  qualifiedDividendRate: 0.15, bottom: 90750,  top: 189300 },
+                               { rate: 0.33, rateLabel: "33%",  qualifiedDividendRate: 0.15, bottom: 189300, top: 411500 },
+                               { rate: 0.35, rateLabel: "35%",  qualifiedDividendRate: 0.15, bottom: 411500, top: 413200 },
+                               { rate: 0.39, rateLabel: "39%",  qualifiedDividendRate: 0.20, bottom: 413200, top: Number.MAX_VALUE } 
                              ],
-                     married: [ { rate: 0,    bottom: 0,     top: 0 },
-                                { rate: 0.10, bottom: 0,     top: 18450 },
-                                { rate: 0.15, bottom: 18450, top: 74900 },
-                                { rate: 0.25, bottom: 74900, top: 151200 },
-                                { rate: 0.28, bottom: 151200,top: 230450 },
-                                { rate: 0.33, bottom: 230450,top: 411500 },
-                                { rate: 0.35, bottom: 411500,top: 464850 },
-                                { rate: 0.39, bottom: 464850,top: Number.MAX_VALUE}
+                     married: [ { rate: 0,    rateLabel: "",     qualifiedDividendRate: 0,    bottom: 0,     top: 0 },
+                                { rate: 0.10, rateLabel: "10%",  qualifiedDividendRate: 0,    bottom: 0,     top: 18450 },
+                                { rate: 0.15, rateLabel: "15%",  qualifiedDividendRate: 0,    bottom: 18450, top: 74900 },
+                                { rate: 0.25, rateLabel: "25%",  qualifiedDividendRate: 0.15, bottom: 74900, top: 151200 },
+                                { rate: 0.28, rateLabel: "28%",  qualifiedDividendRate: 0.15, bottom: 151200,top: 230450 },
+                                { rate: 0.33, rateLabel: "33%",  qualifiedDividendRate: 0.15, bottom: 230450,top: 411500 },
+                                { rate: 0.35, rateLabel: "35%",  qualifiedDividendRate: 0.15, bottom: 411500,top: 464850 },
+                                { rate: 0.39, rateLabel: "39%",  qualifiedDividendRate: 0.20, bottom: 464850,top: Number.MAX_VALUE}
                               ],
-                     headofhousehold: [ { rate: 0,    bottom: 0,     top: 0 },
-                                        { rate: 0.10, bottom: 0,     top: 13150 },
-                                        { rate: 0.15, bottom: 13150, top: 50200 },
-                                        { rate: 0.25, bottom: 50200, top: 129600 },
-                                        { rate: 0.28, bottom: 129600,top: 209850 },
-                                        { rate: 0.33, bottom: 209850,top: 411500 },
-                                        { rate: 0.35, bottom: 411500,top: 439000 },
-                                        { rate: 0.39, bottom: 439000,top: Number.MAX_VALUE } 
+                     headofhousehold: [ { rate: 0,    rateLabel: "",     qualifiedDividendRate: 0,     bottom: 0,     top: 0 },
+                                        { rate: 0.10, rateLabel: "10%",  qualifiedDividendRate: 0,     bottom: 0,     top: 13150 },
+                                        { rate: 0.15, rateLabel: "15%",  qualifiedDividendRate: 0,     bottom: 13150, top: 50200 },
+                                        { rate: 0.25, rateLabel: "25%",  qualifiedDividendRate: 0.15,  bottom: 50200, top: 129600 },
+                                        { rate: 0.28, rateLabel: "28%",  qualifiedDividendRate: 0.15,  bottom: 129600,top: 209850 },
+                                        { rate: 0.33, rateLabel: "33%",  qualifiedDividendRate: 0.15,  bottom: 209850,top: 411500 },
+                                        { rate: 0.35, rateLabel: "35%",  qualifiedDividendRate: 0.15,  bottom: 411500,top: 439000 },
+                                        { rate: 0.39, rateLabel: "39%",  qualifiedDividendRate: 0.20,  bottom: 439000,top: Number.MAX_VALUE } 
                                       ]
                   };
 
@@ -1799,7 +1801,7 @@ angular.module( "ItcApp", [] )
      * @return the size of the bracket (in terms of income range)
      */
     var getBracketSize = function(bracket, income) {
-        return getBracketTop(bracket,income) - bracket.bottom;
+        return Math.max( 0, getBracketTop(bracket,income) - bracket.bottom );
     };
 
     /**
@@ -1820,6 +1822,7 @@ angular.module( "ItcApp", [] )
         var incomeRange = getBracketSize(bracket, income); 
         return bracket.rate * incomeRange;
     };
+
 
     /**
      * Export API.
@@ -2049,7 +2052,12 @@ angular.module( "ItcApp", [] )
 
         incomeData.wages = Math.max(0, incomeData.wages);
         incomeData.interestIncome = Math.max(0, incomeData.interestIncome); 
-        incomeData.dividendIncome = Math.max(0, incomeData.dividendIncome);
+        incomeData.totalOrdinaryDividends = Math.max(0, incomeData.totalOrdinaryDividends);
+
+        // Qualified Dividends can't be more than TotalOrdinaryDividends
+        incomeData.qualifiedDividends = Math.max(0, incomeData.qualifiedDividends);
+        incomeData.qualifiedDividends = Math.min(incomeData.totalOrdinaryDividends, incomeData.qualifiedDividends);
+
         incomeData.socialSecurityWages = Math.max(0, incomeData.socialSecurityWages);
         incomeData.medicareWages = Math.max(0, incomeData.medicareWages);
         
@@ -2075,7 +2083,7 @@ angular.module( "ItcApp", [] )
 
         logger.fine("summarize: entry: incomeData=" + JSON.stringify(incomeData));
 
-        incomeData.agi = incomeData.wages + incomeData.interestIncome + incomeData.dividendIncome;
+        incomeData.agi = incomeData.wages + incomeData.interestIncome + incomeData.totalOrdinaryDividends;
 
         incomeData.totalItemizedDeduction = incomeData.itemizedDeductions.stateTax
                                                 + incomeData.itemizedDeductions.mortgageInterest 
@@ -2089,12 +2097,12 @@ angular.module( "ItcApp", [] )
 
         incomeData.taxableAgi = incomeData.agi - incomeData.totalDeduction;
 
-        incomeData.totalIncome = Math.max( incomeData.medicareWages + incomeData.interestIncome + incomeData.dividendIncome,
+        incomeData.totalIncome = Math.max( incomeData.medicareWages + incomeData.interestIncome + incomeData.totalOrdinaryDividends,
                                            incomeData.agi );
 
         // compute taxes.
         incomeData.incomeTax = _.reduce(TaxRates.getBrackets( incomeData.taxableAgi ), 
-                                        function( memo, bracket ) { return memo + TaxRates.getTaxedAmount(bracket, incomeData.taxableAgi ); }, 
+                                        function( memo, bracket ) { return memo + getTaxForBracket(bracket, incomeData ); }, 
                                         0 );
 
         incomeData.socialSecurityTax = TaxRates.getTaxedAmount( TaxRates.socialsecurity.single, incomeData.socialSecurityWages );
@@ -2104,12 +2112,14 @@ angular.module( "ItcApp", [] )
                                           0 );
 
 
+        incomeData.totalIncomeTaxBeforeCredits =  incomeData.incomeTax ; 
         incomeData.totalTaxBeforeCredits =  incomeData.incomeTax + incomeData.socialSecurityTax + incomeData.medicareTax ;
 
         // TODO: refundable vs non-refundable credits.
         //       for now assume all non-refundable (i.e. tax credit can't exceed tax due).
         incomeData.totalTaxCredits = Math.min( incomeData.totalTaxBeforeCredits, incomeData.totalTaxCredits );
 
+        incomeData.totalIncomeTax = incomeData.totalIncomeTaxBeforeCredits - incomeData.totalTaxCredits;
         incomeData.totalTax = incomeData.totalTaxBeforeCredits - incomeData.totalTaxCredits;
 
         incomeData.totalTaxWithheld = incomeData.taxWithheld.income
@@ -2132,7 +2142,8 @@ angular.module( "ItcApp", [] )
             socialSecurityWages: 115000,
             medicareWages: 115000,
             interestIncome: 36.93,
-            dividendIncome: 1500,
+            totalOrdinaryDividends: 1500,
+            qualifiedDividends: 1500,
 
             standardDeduction: TaxRates.standardDeduction.single,
 
@@ -2161,7 +2172,8 @@ angular.module( "ItcApp", [] )
             socialSecurityWages: 0,
             medicareWages: 0,
             interestIncome: 0,
-            dividendIncome: 0,
+            totalOrdinaryDividends: 0,
+            qualifiedDividends: 0,
 
             standardDeduction: TaxRates.standardDeduction.single,
 
@@ -2181,6 +2193,40 @@ angular.module( "ItcApp", [] )
         };
     };
 
+    /**
+     * @return the amount of ordinary tax (excluding qualified dividends) for the given bracket and incomeData
+     */
+    var getOrdinaryTaxedAmount = function(bracket, incomeData) {
+        return TaxRates.getTaxedAmount( bracket, incomeData.taxableAgi - incomeData.qualifiedDividends); 
+    };
+
+    /**
+     * @return the amount of qualified div tax for the given bracket and income
+     */
+    var getQualifiedDividendTaxedAmount = function(bracket, incomeData) {
+        
+        var taxableAgiBeforeQualifiedDividends = incomeData.taxableAgi - incomeData.qualifiedDividends;
+
+        if (taxableAgiBeforeQualifiedDividends > bracket.top) {
+            // no qual divs occur in this bracket
+            return 0;
+        }
+
+        // find the portion of qualified divs that occur in this bracket.
+        var portionOfQualifiedDividends = TaxRates.getBracketTop(bracket, incomeData.taxableAgi) - taxableAgiBeforeQualifiedDividends;
+        return bracket.qualifiedDividendRate * portionOfQualifiedDividends;
+    };
+
+    /**
+     * (taxableAgi - qualifiedDividends) is taxed at ordinary rate.
+     * (qualifiedDividends) is taxed at qualifiedDividendRate.
+     * 
+     * @return the amount of tax (ordinary + qualifiedDividends) for the given bracket and incomeData.
+     */
+    var getTaxForBracket = function(bracket, incomeData) {
+        return getOrdinaryTaxedAmount(bracket, incomeData) + getQualifiedDividendTaxedAmount(bracket, incomeData);
+    };
+
 
     /**
      * Export api.
@@ -2189,7 +2235,8 @@ angular.module( "ItcApp", [] )
         sanityCheck: sanityCheck,
         summarize: summarize,
         getDefaultIncomeData: getDefaultIncomeData,
-        getClearedIncomeData: getClearedIncomeData
+        getClearedIncomeData: getClearedIncomeData,
+        getTaxForBracket: getTaxForBracket
     };
 
 
