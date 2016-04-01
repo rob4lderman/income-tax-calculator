@@ -117,8 +117,8 @@ angular.module( "ItcApp", [] )
         $scope.inputSsWages = incomeData.socialSecurityWages;
         $scope.inputMedicareWages = incomeData.medicareWages;
         $scope.inputInterestIncome = incomeData.interestIncome;
-        $scope.inputTotalOrdinaryDividends = incomeData.totalOrdinaryDividends;
-        $scope.inputQualifiedDividends = incomeData.qualifiedDividends;
+        $scope.inputTotalOrdinaryDividends = incomeData.totalOrdinaryDividends || 0;
+        $scope.inputQualifiedDividends = incomeData.qualifiedDividends || 0;
         
         $scope.inputIncomeTaxWithheld= incomeData.taxWithheld.income;
         $scope.inputSsTaxWithheld = incomeData.taxWithheld.socialSecurity;
