@@ -106,6 +106,9 @@
                                         <em>1099-INT: Interest income</em>, e.g. interest earned on a bank account.  Your financial institution
                                         should provide you with a 1099-INT form indicating the amount of interest earned.
                                     </p>
+                                    <p>
+                                        Taxable interest income is reported on <em>1040 line 8a</em>.
+                                    </p>
                                 </div>
                                 <input id="itc-input-interest-income" type="text" class="form-control input-sm itc-input" ng-model="inputInterestIncome" itc-currency-input placeholder="Interest Income" />
                             </div>
@@ -129,6 +132,9 @@
                                         <li><em>Qualified dividends</em>: Taxed at a lower rate, closer to the capital gains tax rate.</li>
                                     </ul>
                                     <p>
+                                        Total ordinary dividends are reported on <em>1040 line 9a</em>.
+                                    </p>
+                                    <p>
                                         Learn more at <a href="https://www.irs.gov/publications/p550/ch01.html#en_US_2015_publink100010066">irs.gov</a>
                                     </p>
                                 </div>
@@ -145,7 +151,10 @@
                                         that are qualified dividends.
                                     </p>
                                     <p>
-                                        <em>Qualified dividends</em> are taxed at a lower rate than ordinary dividends.
+                                        Qualified dividends are taxed at a lower rate than ordinary dividends.
+                                    </p>
+                                    <p>
+                                        Qualified dividends are reported on <em>1040 line 9b</em>.
                                     </p>
                                     <p>
                                         Learn more at <a href="https://www.irs.gov/publications/p550/ch01.html#en_US_2015_publink100010066">irs.gov</a>
@@ -180,6 +189,9 @@
                                         <em>Adjusted Gross Income (AGI)</em> is the sum of all income (from wages, interest, dividends, etc) after 
                                         deducting tax-deferred contributions to a retirement account (e.g. a 401-K).
                                     </p>
+                                    <p>
+                                        AGI is reported on <em>1040 line 37</em>.
+                                    </p>
                                 </div>
                                 <span class="itc-label-value">{{ incomeData.agi | currency:'$':2 }} </span>
                             </div>
@@ -207,6 +219,9 @@
                                     <p>
                                         <em>W-2 box 2: Federal Income Tax Withheld</em> indicates the amount of wages
                                         that have been withheld by your employer for federal income taxes.
+                                    </p>
+                                    <p>
+                                        Federal income tax Withheld is reported on <em>1040 line 74</em>.
                                     </p>
                                 </div>
                                 <input id="itc-income-tax-withheld" type="text" class="form-control input-sm itc-input" ng-model="inputIncomeTaxWithheld" itc-currency-input placeholder="W-2 box 2" />
@@ -277,6 +292,9 @@
                                         The amount of your <em>Adjusted Gross Income</em> that is taxable. It's
                                         your <em>AGI</em> after subtracting all deductions.
                                     </p>
+                                    <p>
+                                        Taxable AGI is reported on <em>1040 line 43</em>.
+                                    </p>
                                 </div>
                                 <div>
                                     <span class="itc-label-value">{{ incomeData.taxableAgi | currency:'$':2 }} </span>
@@ -292,6 +310,9 @@
                                 <div class="itc-help" ng-if="showIncomeTaxDueHelp">
                                     <p>
                                         The amount of federal income tax you owe.
+                                    </p>
+                                    <p>
+                                        The amount of federal income tax is reported on <em>1040 line 44</em>.
                                     </p>
                                 </div>
                                 <div>
@@ -403,6 +424,9 @@
                                         The personal exemption "phases out" for higher incomes.
                                     </p>
                                     <p>
+                                        The personal exemption is reported on <em>1040 line 42</em>.
+                                    </p>
+                                    <p>
                                         Learn more at <a href="https://www.irs.gov/publications/p17/ch03.html#en_US_2015_publink1000309843">irs.gov</a>.
                                     </p>
                                 </div>
@@ -423,6 +447,9 @@
                                     </p>
                                     <p>
                                         Choose whichever is larger, so as to reduce your taxable income as much as possible.
+                                    </p>
+                                    <p>
+                                        Report the chosen deduction amount on <em>1040 line 40</em>.
                                     </p>
                                     <p>
                                         Learn more at <a href="https://www.irs.gov/Credits-&-Deductions/Individuals/Standard-Deduction">irs.gov</a>.
@@ -634,12 +661,12 @@
                     <div class="col-md-6">
                         <ul>
                             <li><em>Brackets</em>: The tax brackets.  Only those brackets that apply to your income are shown.  </li>
-                            <li><em>Income</em>: Your income, color-coded by tax-bracket. The gray portion at the top represents your deductions. </li>
+                            <li><em>Income</em>: Your income, color-coded by tax-bracket. The gray portion at the top represents your deductions (which are not taxed). </li>
                             <li><em>Bracket Tax</em>: The amount of tax due for each bracket. </li>
-                            <li><em>Social Security</em>: Social security wages, and the amount of social security tax. </li>
-                            <li><em>Medicare</em>: Medicare wages/brackets, and the amount of medicare tax. </li>
-                            <li><em>Total Tax Due</em>: The total amount of federal income taxes due, including social security and medicare taxes. </li>
-                            <li><em>Tax Withheld</em>: The amount of tax withheld. The net difference between tax withheld and total tax due is your refund (or bill).</li>
+                            <li><em>Social Security</em>: The portion of income subject to social security tax, along with the amount taxed. </li>
+                            <li><em>Medicare</em>: The portion of income subject to medicare tax, along with the amount taxed. </li>
+                            <li><em>Total Tax Due</em>: The total amount of federal income taxes you owe, including social security and medicare taxes. </li>
+                            <li><em>Tax Withheld</em>: The amount of income already withheld for taxes. The net difference between tax withheld and total tax due equals your refund (or bill).</li>
                         </ul>
                     </div>
                     <div class="col-md-6">
